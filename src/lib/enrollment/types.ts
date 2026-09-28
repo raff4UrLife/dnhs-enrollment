@@ -1,3 +1,4 @@
+// src/lib/enrollment/types.ts
 export type ApplicationType = "new" | "transfer";
 export type Gender = "Male" | "Female";
 
@@ -66,6 +67,7 @@ export interface ApplicationFormData {
   sped_category_id: string | null;
   has_pwd_id: boolean;
   average: number | null;
+  email: string;
 }
 
 export const INITIAL_APPLICATION_FORM: ApplicationFormData = {
@@ -126,4 +128,21 @@ export const INITIAL_APPLICATION_FORM: ApplicationFormData = {
   sped_category_id: null,
   has_pwd_id: false,
   average: null,
+  email: "",
+};
+
+export interface DocumentType {
+  id: string;
+  name: string;
+  required: boolean;
+}
+
+export interface ApplicationFiles {
+  profile_picture: File | null;
+  documents: Record<string, File | null>; // key = DocumentType id
+}
+
+export const INITIAL_APPLICATION_FILES: ApplicationFiles = {
+  profile_picture: null,
+  documents: {},
 };

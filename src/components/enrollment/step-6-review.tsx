@@ -1,4 +1,4 @@
-//step-5-review.tsx
+// src/components/enrollment/step-6-review.tsx
 import { Checkbox } from "@/components/ui/form-fields";
 import {
   TRACKS,
@@ -6,11 +6,16 @@ import {
   LEARNING_MODALITIES,
   DIMASALANG_BARANGAYS,
 } from "@/lib/enrollment/reference-data";
-import type { ApplicationFormData } from "@/lib/enrollment/types";
+import type {
+  ApplicationFormData,
+  ApplicationFiles,
+} from "@/lib/enrollment/types";
+import { DOCUMENT_TYPES } from "@/lib/enrollment/reference-data";
 import { Button } from "@/components/ui/button";
 
 interface StepProps {
   data: ApplicationFormData;
+  files: ApplicationFiles;
   onViewStep: (step: number) => void;
   certified: boolean;
   onCertifiedChange: (value: boolean) => void;
@@ -64,6 +69,7 @@ function ReviewSection({
 
 export function Step5Review({
   data,
+  files,
   onViewStep,
   certified,
   onCertifiedChange,
@@ -164,6 +170,25 @@ export function Step5Review({
           label="General average"
           value={data.average !== null ? String(data.average) : "—"}
         />
+      </ReviewSection>
+
+      <ReviewSection
+        title="Documents & Photo"
+        stepIndex={4}
+        onViewStep={onViewStep}
+      >
+        <ReviewRow label="Email" value={data.email} />
+        <ReviewRow
+          label="Profile picture"
+          value={files.profile_picture ? "Attached" : "Not provided"}
+        />
+        {DOCUMENT_TYPES.map((d) => (
+          <ReviewRow
+            key={d.id}
+            label={d.name}
+            value={files.documents[d.id] ? "Attached" : "Missing"}
+          />
+        ))}
       </ReviewSection>
 
       <Checkbox

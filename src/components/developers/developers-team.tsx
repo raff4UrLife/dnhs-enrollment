@@ -14,7 +14,7 @@ const developers = [
   {
     name: "Raffy Maluya",
     role: "Team Leader/Programmer",
-    image: "/assets/logo.png",
+    image: "/assets/raff.png",
   },
   { name: "Marvie Tamayo", role: "System Analyst", image: "/assets/marv.jpeg" },
   { name: "Rachel Bandol", role: "QA Tester", image: "/assets/logo.png" },
@@ -70,7 +70,7 @@ export function Developers() {
       <div className="relative z-10 flex w-full flex-col items-center px-6 py-16">
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm md:text-4xl">
-            The Developers Behind The Work
+            Developers Behind The Work
           </h1>
 
           <div className="mx-auto mt-3 h-1 w-full rounded-full bg-primary" />

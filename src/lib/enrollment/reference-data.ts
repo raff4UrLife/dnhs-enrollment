@@ -1,13 +1,21 @@
+// //src/lib/enrollment/reference-data.ts
 // TODO: Once these tables are seeded in Supabase, replace these static
 // arrays with real fetches. IDs here are readable placeholders standing in
 // for the UUIDs Supabase will generate — swap the fetch source later,
 // the shape (id/name/track_id) stays the same.
+import type { DocumentType } from "@/lib/enrollment/types";
 
 export const GRADE_LEVELS = [7, 8, 9, 10, 11, 12];
 
 export const TRACKS = [
   { id: "track-academic", name: "Academic" },
   { id: "track-tvl", name: "TVL" },
+];
+
+export const DOCUMENT_TYPES: DocumentType[] = [
+  { id: "doc-psa", name: "PSA Birth Certificate", required: true },
+  { id: "doc-form-138", name: "Form 138 (Report Card)", required: true },
+  { id: "doc-good-moral", name: "Good Moral Certificate", required: true },
 ];
 
 export const STRANDS = [

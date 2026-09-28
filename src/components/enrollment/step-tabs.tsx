@@ -1,3 +1,4 @@
+// src/components/enrollment/steb-tabs.tsx
 import { cn } from "@/lib/utils";
 
 interface StepTabsProps {
@@ -7,7 +8,8 @@ interface StepTabsProps {
 
 export function StepTabs({ steps, currentStep }: StepTabsProps) {
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-white/15 bg-white/15 sm:grid-cols-5">
+    // <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-white/15 bg-white/15 sm:grid-cols-5">
+    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-white/15 bg-white/15 sm:grid-cols-3 md:grid-cols-6">
       {steps.map((step, index) => {
         const isActive = index === currentStep;
         const isDone = index < currentStep;

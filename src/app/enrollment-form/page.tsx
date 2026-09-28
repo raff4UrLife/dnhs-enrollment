@@ -1,4 +1,4 @@
-//page.tsx
+// src/enrollment-form/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -21,7 +21,9 @@ import {
 
 import {
   INITIAL_APPLICATION_FORM,
+  INITIAL_APPLICATION_FILES,
   type ApplicationFormData,
+  type ApplicationFiles,
 } from "@/lib/enrollment/types";
 
 import { ACTIVE_SCHOOL_YEAR } from "@/lib/enrollment/reference-data";
@@ -44,8 +46,12 @@ import {
   isStep4Valid,
 } from "@/components/enrollment/step-4-family-background";
 
-import { Step5Review } from "@/components/enrollment/step-5-review";
+import { Step5Review } from "@/components/enrollment/step-6-review";
 import { SubmissionSuccess } from "@/components/enrollment/submission-success";
+import {
+  Step5Documents,
+  isStep6Valid,
+} from "@/components/enrollment/step-5-documents";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
@@ -53,6 +59,7 @@ const STEPS = [
   { label: "Learner Information" },
   { label: "Address" },
   { label: "Family & Background" },
+  { label: "Documents & Photo" },
   { label: "Review & Submit" },
 ];
 
@@ -78,6 +85,11 @@ export default function EnrollmentFormPage() {
 
   const [certified, setCertified] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [files, setFiles] = useState<ApplicationFiles>(
+    INITIAL_APPLICATION_FILES,
+  );
+  const updateFiles = (patch: Partial<ApplicationFiles>) =>
+    setFiles((prev) => ({ ...prev, ...patch }));
 
   const updateData = (patch: Partial<ApplicationFormData>) =>
     setData((prev) => ({ ...prev, ...patch }));
@@ -91,8 +103,9 @@ export default function EnrollmentFormPage() {
           ? isStep3Valid(data)
           : currentStep === 3
             ? isStep4Valid(data)
-            : certified;
-
+            : currentStep === 4
+              ? isStep6Valid(files, data)
+              : certified;
   const openView = (step: number) => {
     setViewingErrors({});
     setViewingStep(step);
@@ -179,8 +192,17 @@ export default function EnrollmentFormPage() {
             <Step4FamilyBackground data={data} onChange={updateData} />
           )}
           {currentStep === 4 && (
+            <Step5Documents
+              files={files}
+              onChange={updateFiles}
+              data={data}
+              onDataChange={updateData}
+            />
+          )}
+          {currentStep === 5 && (
             <Step5Review
               data={data}
+              files={files}
               onViewStep={openView}
               certified={certified}
               onCertifiedChange={setCertified}
@@ -261,6 +283,14 @@ export default function EnrollmentFormPage() {
                 data={data}
                 onChange={updateData}
                 errors={viewingErrors}
+              />
+            )}
+            {viewingStep === 4 && (
+              <Step5Documents
+                files={files}
+                onChange={updateFiles}
+                data={data}
+                onDataChange={updateData}
               />
             )}
           </DialogBody>
