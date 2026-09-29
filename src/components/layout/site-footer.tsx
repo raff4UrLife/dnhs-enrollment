@@ -40,7 +40,7 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/enrollment-form" className="hover:text-white">
-                Enrollment Form
+                Pre-Enrollment Form
               </Link>
             </li>
             <li>
