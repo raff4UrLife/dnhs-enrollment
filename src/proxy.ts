@@ -35,7 +35,10 @@ export async function proxy(request: NextRequest) {
   const isProtected =
     pathname.startsWith("/admin") && pathname !== "/admin/login";
 
-  if (isProtected && !user) {
+  // Username/password logins use our own cookie instead of a Supabase session
+  const hasUsernameSession = request.cookies.has("dnhs_session");
+
+  if (isProtected && !user && !hasUsernameSession) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     return NextResponse.redirect(url);

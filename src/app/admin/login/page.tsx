@@ -8,20 +8,21 @@ import { Eye, EyeOff, Loader2, X } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { loginWithPassword } from "@/lib/auth/login-actions";
 
-type LoginResult = { ok: true } | { ok: false; error: string };
+//type LoginResult = { ok: true } | { ok: false; error: string };
 
 // Placeholder: replace once the username/password server action exists.
-async function signInWithPassword(
-  username: string,
-  password: string,
-): Promise<LoginResult> {
-  // TODO: call the server action that checks whitelisted_users
-  // (username match, password_hash verify, status = 'active').
-  void username;
-  void password;
-  return { ok: false, error: "Username login is not connected yet." };
-}
+// async function signInWithPassword(
+//   username: string,
+//   password: string,
+// ): Promise<LoginResult> {
+//   // TODO: call the server action that checks whitelisted_users
+//   // (username match, password_hash verify, status = 'active').
+//   void username;
+//   void password;
+//   return { ok: false, error: "Username login is not connected yet." };
+// }
 
 // Messages for the ?error= codes sent by /auth/callback
 const CALLBACK_ERRORS: Record<string, string> = {
@@ -106,12 +107,14 @@ function LoginContent() {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await signInWithPassword(cleanUsername, password);
+      //const result = await loginWithPassword(cleanUsername, password);
+      const result = await loginWithPassword(cleanUsername, password);
       if (!result.ok) {
         setError(result.error);
         return;
       }
       router.replace("/admin");
+      router.refresh();
     } catch {
       setError("Something went wrong. Try again.");
     } finally {

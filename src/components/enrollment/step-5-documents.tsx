@@ -1,8 +1,8 @@
 // src/components/enrollment/step-5-documents.tsx
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useReference } from "@/lib/enrollment/reference-context";
+import { Camera, ScanLine, Upload, User } from "lucide-react";
 import type {
   ApplicationFormData,
   ApplicationFiles,
@@ -58,6 +58,8 @@ export function Step5Documents({
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   // which slot is being scanned: "photo", a document id, or null (closed)
   const [scanTarget, setScanTarget] = useState<string | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const docInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     const file = files.profile_picture;
@@ -98,6 +100,12 @@ export function Step5Documents({
     }
   }
 
+  function handleFile(e: ChangeEvent<HTMLInputElement>, key: string) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    pick(key, file, IMAGE_TYPES);
+  }
+
   const emailError = getStep6Errors(files, data, documentTypes).email;
   return (
     <div className="space-y-6">
@@ -106,7 +114,7 @@ export function Step5Documents({
         bring the originals to the school for verification.
       </p>
 
-      <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
+      {/* <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
         <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
           Email (optional)
         </h3>
@@ -193,6 +201,135 @@ export function Step5Documents({
                   {files.documents[d.id]!.name}
                 </p>
               )}
+              {pickErrors[d.id] && (
+                <p className="mt-1 text-sm text-red-400">{pickErrors[d.id]}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div> */}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="h-full rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
+          <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
+            Email (optional)
+          </h3>
+          <input
+            type="email"
+            value={data.email}
+            onChange={(e) => onDataChange({ email: e.target.value })}
+            placeholder="name@example.com"
+            className="mt-4 w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          />
+          <p className="mt-2 text-xs text-white/50">
+            We use this only to notify you about your application status.
+          </p>
+          {emailError && (
+            <p className="mt-1 text-sm text-red-400">{emailError}</p>
+          )}
+        </div>
+
+        <div className="h-full rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
+          <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
+            Profile Picture
+          </h3>
+          <div className="mt-4 flex items-center gap-4">
+            <div className="flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/15 bg-white/10">
+              {preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="size-full object-cover"
+                />
+              ) : (
+                <User className="size-10 text-white/30" />
+              )}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <input
+                ref={photoInput}
+                type="file"
+                className="hidden"
+                accept={IMAGE_TYPES.join(",")}
+                onChange={(e) => handleFile(e, "photo")}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-primary"
+                onClick={() => photoInput.current?.click()}
+              >
+                <Upload className="size-4" />
+                Choose file
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-primary"
+                onClick={() => setScanTarget("photo")}
+              >
+                <Camera className="size-4" />
+                Take a photo
+              </Button>
+              <p className="truncate text-xs text-white/50">
+                {files.profile_picture?.name ?? "No file chosen"}
+              </p>
+            </div>
+          </div>
+          {pickErrors.photo && (
+            <p className="mt-2 text-sm text-red-400">{pickErrors.photo}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
+        <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
+          Required Documents
+        </h3>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          {documentTypes.map((d) => (
+            <div
+              key={d.id}
+              className="flex flex-col rounded-md border border-white/10 bg-white/5 p-4"
+            >
+              <p className="text-sm font-medium text-white">{d.name}</p>
+              <input
+                ref={(el) => {
+                  docInputs.current[d.id] = el;
+                }}
+                type="file"
+                className="hidden"
+                accept={IMAGE_TYPES.join(",")}
+                onChange={(e) => handleFile(e, d.id)}
+              />
+              <div className="mt-3 flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-primary"
+                  onClick={() => docInputs.current[d.id]?.click()}
+                >
+                  <Upload className="size-4" />
+                  Choose file
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-primary"
+                  onClick={() => setScanTarget(d.id)}
+                >
+                  <ScanLine className="size-4" />
+                  Scan document
+                </Button>
+              </div>
+              <p className="mt-2 truncate text-xs text-white/50">
+                {files.documents[d.id]?.name ?? "No file chosen"}
+              </p>
               {pickErrors[d.id] && (
                 <p className="mt-1 text-sm text-red-400">{pickErrors[d.id]}</p>
               )}

@@ -15,6 +15,7 @@ export function SiteFooter() {
               width={40}
               height={40}
               className="h-10 w-10 rounded-full object-cover"
+              priority
             />
             <span className="font-serif text-base font-semibold text-primary">
               Dimasalang National High School
