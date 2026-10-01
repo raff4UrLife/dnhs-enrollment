@@ -1,4 +1,4 @@
-//STEP 4
+// src/components/enrollment/step-4-family-background.tsx
 import {
   Field,
   FieldGroup,
@@ -8,7 +8,7 @@ import {
   Checkbox,
 } from "@/components/ui/form-fields";
 import type { ApplicationFormData } from "@/lib/enrollment/types";
-import { SPED_CATEGORIES } from "@/lib/enrollment/reference-data";
+import { useReference } from "@/lib/enrollment/reference-context";
 
 interface StepProps {
   data: ApplicationFormData;
@@ -26,11 +26,13 @@ export function Step4FamilyBackground({
   onChange,
   errors = {},
 }: StepProps) {
+  const { spedCategories } = useReference();
+
   return (
     <div className="space-y-10">
       <FieldGroup title="Parent / guardian information">
         <Field>
-          <Label htmlFor="father_last_name">Father's last name</Label>
+          <Label htmlFor="father_last_name">Father &apos; s last name</Label>
           <Input
             id="father_last_name"
             value={data.father_last_name}
@@ -38,7 +40,7 @@ export function Step4FamilyBackground({
           />
         </Field>
         <Field>
-          <Label htmlFor="father_first_name">Father's first name</Label>
+          <Label htmlFor="father_first_name">Father &apos; s first name</Label>
           <Input
             id="father_first_name"
             value={data.father_first_name}
@@ -46,7 +48,9 @@ export function Step4FamilyBackground({
           />
         </Field>
         <Field>
-          <Label htmlFor="father_contact_number">Father's contact number</Label>
+          <Label htmlFor="father_contact_number">
+            Father &apos; s contact number
+          </Label>
           <Input
             id="father_contact_number"
             value={data.father_contact_number}
@@ -57,7 +61,7 @@ export function Step4FamilyBackground({
         </Field>
 
         <Field>
-          <Label htmlFor="mother_last_name">Mother's last name</Label>
+          <Label htmlFor="mother_last_name">Mother &apos; s last name</Label>
           <Input
             id="mother_last_name"
             value={data.mother_last_name}
@@ -65,7 +69,7 @@ export function Step4FamilyBackground({
           />
         </Field>
         <Field>
-          <Label htmlFor="mother_first_name">Mother's first name</Label>
+          <Label htmlFor="mother_first_name">Mother &apos; s first name</Label>
           <Input
             id="mother_first_name"
             value={data.mother_first_name}
@@ -73,7 +77,9 @@ export function Step4FamilyBackground({
           />
         </Field>
         <Field>
-          <Label htmlFor="mother_contact_number">Mother's contact number</Label>
+          <Label htmlFor="mother_contact_number">
+            Mother &apos; s contact number
+          </Label>
           <Input
             id="mother_contact_number"
             value={data.mother_contact_number}
@@ -85,7 +91,7 @@ export function Step4FamilyBackground({
 
         <Field>
           <Label htmlFor="guardian_last_name">
-            Guardian's last name (if applicable)
+            Guardian &apos; s last name (if applicable)
           </Label>
           <Input
             id="guardian_last_name"
@@ -94,7 +100,9 @@ export function Step4FamilyBackground({
           />
         </Field>
         <Field>
-          <Label htmlFor="guardian_first_name">Guardian's first name</Label>
+          <Label htmlFor="guardian_first_name">
+            Guardian &apos; s first name
+          </Label>
           <Input
             id="guardian_first_name"
             value={data.guardian_first_name}
@@ -103,7 +111,7 @@ export function Step4FamilyBackground({
         </Field>
         <Field>
           <Label htmlFor="guardian_contact_number">
-            Guardian's contact number
+            Guardian &apos; s contact number
           </Label>
           <Input
             id="guardian_contact_number"
@@ -166,20 +174,20 @@ export function Step4FamilyBackground({
                 a1. With Diagnostics from licensed Medical Specialists
               </p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {SPED_CATEGORIES.filter(
-                  (c) => c.category === "diagnostics",
-                ).map((item) => (
-                  <Checkbox
-                    key={item.id}
-                    label={item.name}
-                    checked={data.sped_category_id === item.id}
-                    onChange={(e) =>
-                      onChange({
-                        sped_category_id: e.target.checked ? item.id : null,
-                      })
-                    }
-                  />
-                ))}
+                {spedCategories
+                  .filter((c) => c.category === "diagnostics")
+                  .map((item) => (
+                    <Checkbox
+                      key={item.id}
+                      label={item.name}
+                      checked={data.sped_category_id === item.id}
+                      onChange={(e) =>
+                        onChange({
+                          sped_category_id: e.target.checked ? item.id : null,
+                        })
+                      }
+                    />
+                  ))}
               </div>
             </div>
 
@@ -188,20 +196,20 @@ export function Step4FamilyBackground({
                 a2. With Manifestations
               </p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {SPED_CATEGORIES.filter(
-                  (c) => c.category === "manifestations",
-                ).map((item) => (
-                  <Checkbox
-                    key={item.id}
-                    label={item.name}
-                    checked={data.sped_category_id === item.id}
-                    onChange={(e) =>
-                      onChange({
-                        sped_category_id: e.target.checked ? item.id : null,
-                      })
-                    }
-                  />
-                ))}
+                {spedCategories
+                  .filter((c) => c.category === "manifestations")
+                  .map((item) => (
+                    <Checkbox
+                      key={item.id}
+                      label={item.name}
+                      checked={data.sped_category_id === item.id}
+                      onChange={(e) =>
+                        onChange({
+                          sped_category_id: e.target.checked ? item.id : null,
+                        })
+                      }
+                    />
+                  ))}
               </div>
             </div>
           </Field>
@@ -242,6 +250,9 @@ export function getStep4Errors(data: ApplicationFormData) {
 
   if (data.average === null || data.average < 0 || data.average > 100)
     errors.average = "A valid general average (0–100) is required.";
+
+  if (data.is_sped && data.sped_category_id === null)
+    errors.sped_category_id = "Please choose a SPED category.";
 
   return errors;
 }

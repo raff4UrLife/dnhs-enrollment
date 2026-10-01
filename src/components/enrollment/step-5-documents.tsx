@@ -2,16 +2,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DOCUMENT_TYPES } from "@/lib/enrollment/reference-data";
+import { useReference } from "@/lib/enrollment/reference-context";
 import type {
   ApplicationFormData,
   ApplicationFiles,
+  DocumentType,
 } from "@/lib/enrollment/types";
-import {
-  DOC_TYPES,
-  IMAGE_TYPES,
-  validateFile,
-} from "@/lib/enrollment/validate-file";
+import { IMAGE_TYPES, validateFile } from "@/lib/enrollment/validate-file";
 import { compressImage } from "@/lib/enrollment/compress-image";
 import { CameraCapture } from "@/components/enrollment/camera-capture";
 import { Button } from "@/components/ui/button";
@@ -28,12 +25,13 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function getStep6Errors(
   files: ApplicationFiles,
   data: ApplicationFormData,
+  documentTypes: DocumentType[],
 ) {
   const errors: Record<string, string> = {};
   if (data.email.trim() && !EMAIL_PATTERN.test(data.email.trim())) {
     errors.email = "Enter a valid email address.";
   }
-  for (const d of DOCUMENT_TYPES) {
+  for (const d of documentTypes) {
     if (d.required && !files.documents[d.id]) {
       errors[d.id] = `${d.name} is required.`;
     }
@@ -44,8 +42,9 @@ export function getStep6Errors(
 export function isStep6Valid(
   files: ApplicationFiles,
   data: ApplicationFormData,
+  documentTypes: DocumentType[],
 ) {
-  return Object.keys(getStep6Errors(files, data)).length === 0;
+  return Object.keys(getStep6Errors(files, data, documentTypes)).length === 0;
 }
 
 export function Step5Documents({
@@ -54,6 +53,7 @@ export function Step5Documents({
   data,
   onDataChange,
 }: StepProps) {
+  const { documentTypes } = useReference();
   const [pickErrors, setPickErrors] = useState<Record<string, string>>({});
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   // which slot is being scanned: "photo", a document id, or null (closed)
@@ -98,7 +98,7 @@ export function Step5Documents({
     }
   }
 
-  const emailError = getStep6Errors(files, data).email;
+  const emailError = getStep6Errors(files, data, documentTypes).email;
   return (
     <div className="space-y-6">
       <p className="text-white/70">
@@ -168,15 +168,15 @@ export function Step5Documents({
           Required Documents
         </h3>
         <div className="mt-4 space-y-4">
-          {DOCUMENT_TYPES.map((d) => (
+          {documentTypes.map((d) => (
             <div key={d.id}>
               <p className="text-sm font-medium text-white">{d.name}</p>
               <div className="mt-2 flex flex-col gap-2">
                 <input
                   type="file"
                   className="text-sm text-white/70"
-                  accept={DOC_TYPES.join(",")}
-                  onChange={(e) => pick(d.id, e.target.files?.[0], DOC_TYPES)}
+                  accept={IMAGE_TYPES.join(",")}
+                  onChange={(e) => pick(d.id, e.target.files?.[0], IMAGE_TYPES)}
                 />
                 <Button
                   type="button"

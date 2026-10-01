@@ -17,7 +17,7 @@ const developers = [
     image: "/assets/raff.png",
   },
   { name: "Marvie Tamayo", role: "System Analyst", image: "/assets/marv.jpeg" },
-  { name: "Rachel Bandol", role: "QA Tester", image: "/assets/logo.png" },
+  { name: "Rachel Bandol", role: "QA Tester", image: "/assets/rachel.jpg" },
 ];
 
 export function Developers() {

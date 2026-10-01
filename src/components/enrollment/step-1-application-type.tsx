@@ -1,4 +1,4 @@
-//Step 1
+//src/components/enrollment/step-1-applications.tsx
 import { Field, FieldGroup, Label, Select } from "@/components/ui/form-fields";
 import { GRADE_LEVELS } from "@/lib/enrollment/reference-data";
 import type { ApplicationFormData } from "@/lib/enrollment/types";

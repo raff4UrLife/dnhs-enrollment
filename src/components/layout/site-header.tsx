@@ -1,3 +1,4 @@
+// src/components/layout/site-header.tsx
 "use client";
 
 import Image from "next/image";

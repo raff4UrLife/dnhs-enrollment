@@ -1,22 +1,17 @@
 // src/app/admin/login/page.tsx
 "use client";
 
-import { useState, type SyntheticEvent } from "react";
+import { Suspense, useEffect, useState, type SyntheticEvent } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff, Loader2, X } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 type LoginResult = { ok: true } | { ok: false; error: string };
 
-// Placeholders: replace these two functions once the Supabase project
-//  and Google Cloud OAuth client exist. The UI below does not change.
-
-async function signInWithGoogle(): Promise<void> {
-  // TODO: supabase.auth.signInWithOAuth({ provider: "google", ... })
-}
-
+// Placeholder: replace once the username/password server action exists.
 async function signInWithPassword(
   username: string,
   password: string,
@@ -28,19 +23,43 @@ async function signInWithPassword(
   return { ok: false, error: "Username login is not connected yet." };
 }
 
+// Messages for the ?error= codes sent by /auth/callback
+const CALLBACK_ERRORS: Record<string, string> = {
+  not_authorized: "This Google account is not authorized to access the system.",
+  auth_failed: "Google sign-in failed. Please try again.",
+  missing_code: "Google sign-in failed. Please try again.",
+};
+
 const inputClass =
   "h-10 w-full rounded-md border-2 border-input bg-white px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60";
 
-export default function AdminLoginPage() {
+function LoginContent() {
   const router = useRouter();
-  const close = () => router.back();
+  const searchParams = useSearchParams();
+
+  // Closing the form always goes to Home, so the user never leaves the site
+  const close = () => router.push("/");
 
   const [showPasswordLogin, setShowPasswordLogin] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Start with the error sent back by /auth/callback (read once, on first render)
+  const [error, setError] = useState<string | null>(() => {
+    const code = searchParams.get("error");
+    if (!code) return null;
+    return CALLBACK_ERRORS[code] ?? "Sign-in failed. Please try again.";
+  });
+
+  // Remove ?error=... from the URL so a refresh shows a clean card
+  useEffect(() => {
+    if (searchParams.get("error")) {
+      window.history.replaceState(null, "", "/admin/login");
+    }
+  }, [searchParams]);
 
   function switchView(toPassword: boolean) {
     setShowPasswordLogin(toPassword);
@@ -48,6 +67,30 @@ export default function AdminLoginPage() {
     setPassword("");
     setShowPassword(false);
     setError(null);
+  }
+
+  async function handleGoogleLogin() {
+    if (googleLoading) return;
+    setGoogleLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        // Always show Google's account picker, so a previous (rejected or
+        // shared-computer) account isn't silently signed in again
+        queryParams: { prompt: "select_account" },
+      },
+    });
+
+    // On success the browser is already redirecting to Google, so keep the
+    // spinner. Only reset if something failed before the redirect.
+    if (error) {
+      setError("Could not start Google sign-in. Please try again.");
+      setGoogleLoading(false);
+    }
   }
 
   async function handlePasswordLogin(e: SyntheticEvent<HTMLFormElement>) {
@@ -85,6 +128,8 @@ export default function AdminLoginPage() {
         src="/assets/gate-hero.jpg"
         alt="Dimasalang National High School main entrance"
         fill
+        loading="eager"
+        priority
         className="object-cover"
         sizes="100vw"
       />
@@ -130,14 +175,25 @@ export default function AdminLoginPage() {
                 you successfully sign in with Google.
               </p>
 
+              {error && (
+                <p role="alert" className="mt-4 text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+
               <Button
                 type="button"
                 size="lg"
-                onClick={signInWithGoogle}
+                disabled={googleLoading}
+                onClick={handleGoogleLogin}
                 className="mt-6 w-full rounded-md border-2 border-input bg-white text-foreground hover:bg-muted"
               >
-                <FcGoogle className="h-4 w-4" />
-                Continue with Google
+                {googleLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FcGoogle className="h-4 w-4" />
+                )}
+                {googleLoading ? "Redirecting..." : "Continue with Google"}
               </Button>
 
               <p className="mt-4 text-center text-xs text-muted-foreground">
@@ -249,5 +305,14 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+// useSearchParams needs a Suspense boundary or `next build` fails
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

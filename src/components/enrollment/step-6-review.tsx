@@ -1,16 +1,10 @@
 // src/components/enrollment/step-6-review.tsx
 import { Checkbox } from "@/components/ui/form-fields";
-import {
-  TRACKS,
-  STRANDS,
-  LEARNING_MODALITIES,
-  DIMASALANG_BARANGAYS,
-} from "@/lib/enrollment/reference-data";
+import { useReference } from "@/lib/enrollment/reference-context";
 import type {
   ApplicationFormData,
   ApplicationFiles,
 } from "@/lib/enrollment/types";
-import { DOCUMENT_TYPES } from "@/lib/enrollment/reference-data";
 import { Button } from "@/components/ui/button";
 
 interface StepProps {
@@ -74,8 +68,11 @@ export function Step5Review({
   certified,
   onCertifiedChange,
 }: StepProps) {
+  const { tracks, strands, modalities, barangays, documentTypes } =
+    useReference();
+
   const barangayName = data.current_barangay_id
-    ? lookupName(DIMASALANG_BARANGAYS, data.current_barangay_id)
+    ? lookupName(barangays, data.current_barangay_id)
     : data.current_barangay_other || "—";
 
   return (
@@ -125,17 +122,17 @@ export function Step5Review({
         <ReviewRow label="LRN" value={data.lrn} />
         <ReviewRow
           label="Learning modality"
-          value={lookupName(LEARNING_MODALITIES, data.learning_modality_id)}
+          value={lookupName(modalities, data.learning_modality_id)}
         />
         {(data.grade_level === 11 || data.grade_level === 12) && (
           <>
             <ReviewRow
               label="Track"
-              value={lookupName(TRACKS, data.track_id)}
+              value={lookupName(tracks, data.track_id)}
             />
             <ReviewRow
               label="Strand"
-              value={lookupName(STRANDS, data.strand_id)}
+              value={lookupName(strands, data.strand_id)}
             />
           </>
         )}
@@ -182,7 +179,7 @@ export function Step5Review({
           label="Profile picture"
           value={files.profile_picture ? "Attached" : "Not provided"}
         />
-        {DOCUMENT_TYPES.map((d) => (
+        {documentTypes.map((d) => (
           <ReviewRow
             key={d.id}
             label={d.name}

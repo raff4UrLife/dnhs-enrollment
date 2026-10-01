@@ -1,3 +1,4 @@
+// src/components/layout/site-footer.tsx
 import Image from "next/image";
 import Link from "next/link";
 

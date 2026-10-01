@@ -1,4 +1,4 @@
-//Step 3
+// src/components/enrollment/step-3-address.tsx
 import {
   Field,
   FieldGroup,
@@ -7,7 +7,7 @@ import {
   Select,
   Checkbox,
 } from "@/components/ui/form-fields";
-import { DIMASALANG_BARANGAYS } from "@/lib/enrollment/reference-data";
+import { useReference } from "@/lib/enrollment/reference-context";
 import type { ApplicationFormData } from "@/lib/enrollment/types";
 
 interface StepProps {
@@ -17,6 +17,8 @@ interface StepProps {
 }
 
 export function Step3Address({ data, onChange, errors = {} }: StepProps) {
+  const { barangays } = useReference();
+
   return (
     <div className="space-y-10">
       <FieldGroup title="Current address">
@@ -47,7 +49,7 @@ export function Step3Address({ data, onChange, errors = {} }: StepProps) {
             }
           >
             <option value="">Select barangay</option>
-            {DIMASALANG_BARANGAYS.map((b) => (
+            {barangays.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
@@ -73,20 +75,6 @@ export function Step3Address({ data, onChange, errors = {} }: StepProps) {
             }
           />
         </Field>
-
-        {/* <Field full>
-          <Label htmlFor="current_barangay_other" required>
-            Please specify your barangay and municipality/city
-          </Label>
-          <Input
-            id="current_barangay_other"
-            placeholder="e.g. Barangay Rizal, Sorsogon City"
-            value={data.current_barangay_other}
-            onChange={(e) =>
-              onChange({ current_barangay_other: e.target.value })
-            }
-          />
-        </Field> */}
 
         <Field error={errors.current_municipality_city}>
           <Label htmlFor="current_municipality_city" required>

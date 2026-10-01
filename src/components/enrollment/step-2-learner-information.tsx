@@ -1,4 +1,4 @@
-// components/enrollment/step-2-learner-information.tsx
+// src/components/enrollment/step-2-learner-information.tsx
 import {
   Field,
   FieldGroup,
@@ -6,11 +6,7 @@ import {
   Input,
   Select,
 } from "@/components/ui/form-fields";
-import {
-  TRACKS,
-  STRANDS,
-  LEARNING_MODALITIES,
-} from "@/lib/enrollment/reference-data";
+import { useReference } from "@/lib/enrollment/reference-context";
 import type { ApplicationFormData } from "@/lib/enrollment/types";
 
 interface StepProps {
@@ -29,9 +25,11 @@ export function Step2LearnerInformation({
   onChange,
   errors = {},
 }: StepProps) {
+  const { tracks, strands, modalities } = useReference();
+
   const isSHS = data.grade_level === 11 || data.grade_level === 12;
   const isTransfer = data.application_type === "transfer";
-  const availableStrands = STRANDS.filter((s) => s.track_id === data.track_id);
+  const availableStrands = strands.filter((s) => s.track_id === data.track_id);
 
   return (
     <div className="space-y-10">
@@ -168,7 +166,7 @@ export function Step2LearnerInformation({
             }
           >
             <option value="">Select learning modality</option>
-            {LEARNING_MODALITIES.map((m) => (
+            {modalities.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
@@ -192,7 +190,7 @@ export function Step2LearnerInformation({
               }
             >
               <option value="">Select track</option>
-              {TRACKS.map((t) => (
+              {tracks.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -381,6 +379,8 @@ export function getStep2Errors(data: ApplicationFormData) {
   if (data.birthdate === "") errors.birthdate = "Birthdate is required.";
   if (data.gender === null) errors.gender = "Gender is required.";
   if (data.lrn.trim() === "") errors.lrn = "LRN is required.";
+  else if (!/^\d{12}$/.test(data.lrn.trim()))
+    errors.lrn = "LRN must be exactly 12 digits.";
   if (data.learning_modality_id === null)
     errors.learning_modality_id = "Learning modality is required.";
 
