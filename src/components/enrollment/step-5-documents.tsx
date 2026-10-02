@@ -56,6 +56,9 @@ export function Step5Documents({
   const { documentTypes } = useReference();
   const [pickErrors, setPickErrors] = useState<Record<string, string>>({});
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [documentPreviewUrls, setDocumentPreviewUrls] = useState<
+    Record<string, string>
+  >({});
   // which slot is being scanned: "photo", a document id, or null (closed)
   const [scanTarget, setScanTarget] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
@@ -76,6 +79,23 @@ export function Step5Documents({
       cancelled = true;
     };
   }, [files.profile_picture]);
+
+  useEffect(() => {
+    for (const [id, file] of Object.entries(files.documents)) {
+      if (!file) continue;
+
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        setDocumentPreviewUrls((prev) => ({
+          ...prev,
+          [id]: reader.result as string,
+        }));
+      };
+
+      reader.readAsDataURL(file);
+    }
+  }, [files.documents]);
 
   // no file selected -> no preview (derived, so no setState needed)
   const preview = files.profile_picture ? photoUrl : null;
@@ -113,101 +133,6 @@ export function Step5Documents({
         Upload a clear scan or photo of each document. You will still need to
         bring the originals to the school for verification.
       </p>
-
-      {/* <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
-        <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
-          Email (optional)
-        </h3>
-        <input
-          type="email"
-          value={data.email}
-          onChange={(e) => onDataChange({ email: e.target.value })}
-          placeholder="name@example.com"
-          className="mt-4 w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40"
-        />
-        <p className="mt-2 text-xs text-white/50">
-          We use this only to notify you about your application status.
-        </p>
-        {emailError && (
-          <p className="mt-1 text-sm text-red-400">{emailError}</p>
-        )}
-      </div>
-
-      <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
-        <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
-          Profile Picture
-        </h3>
-        <div className="mt-4 flex items-center gap-4">
-          <div className="size-24 overflow-hidden rounded-full border border-white/15 bg-white/10">
-            {preview && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={preview}
-                alt="Preview"
-                className="size-full object-cover"
-              />
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <input
-              type="file"
-              className="text-sm text-white/70"
-              accept={IMAGE_TYPES.join(",")}
-              onChange={(e) => pick("photo", e.target.files?.[0], IMAGE_TYPES)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit text-primary"
-              onClick={() => setScanTarget("photo")}
-            >
-              Take a photo
-            </Button>
-          </div>
-        </div>
-        {pickErrors.photo && (
-          <p className="mt-2 text-sm text-red-400">{pickErrors.photo}</p>
-        )}
-      </div>
-
-      <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
-        <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
-          Required Documents
-        </h3>
-        <div className="mt-4 space-y-4">
-          {documentTypes.map((d) => (
-            <div key={d.id}>
-              <p className="text-sm font-medium text-white">{d.name}</p>
-              <div className="mt-2 flex flex-col gap-2">
-                <input
-                  type="file"
-                  className="text-sm text-white/70"
-                  accept={IMAGE_TYPES.join(",")}
-                  onChange={(e) => pick(d.id, e.target.files?.[0], IMAGE_TYPES)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-fit text-primary"
-                  onClick={() => setScanTarget(d.id)}
-                >
-                  Scan document
-                </Button>
-              </div>
-              {files.documents[d.id] && (
-                <p className="mt-1 text-xs text-white/50">
-                  {files.documents[d.id]!.name}
-                </p>
-              )}
-              {pickErrors[d.id] && (
-                <p className="mt-1 text-sm text-red-400">{pickErrors[d.id]}</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div> */}
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="h-full rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
@@ -296,6 +221,21 @@ export function Step5Documents({
               className="flex flex-col rounded-md border border-white/10 bg-white/5 p-4"
             >
               <p className="text-sm font-medium text-white">{d.name}</p>
+              <div className="mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/10">
+                {documentPreviewUrls[d.id] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={documentPreviewUrls[d.id]}
+                    alt={`${d.name} preview`}
+                    className="size-full object-contain"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-white/30">
+                    <ScanLine className="size-10" />
+                    <span className="mt-2 text-xs">Document preview</span>
+                  </div>
+                )}
+              </div>
               <input
                 ref={(el) => {
                   docInputs.current[d.id] = el;
