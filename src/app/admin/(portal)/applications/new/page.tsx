@@ -34,7 +34,7 @@ export default async function NewApplicationPage() {
       <div>
         <Link
           href="/admin/applications"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-all duration-200 hover:text-secondary hover:bg-primary/10 border-2 border-primary px-3 py-1.5 rounded-md"
         >
           <ArrowLeft className="size-4" />
           Back to applications

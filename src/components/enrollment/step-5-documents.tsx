@@ -232,7 +232,6 @@ export function Step5Documents({
                 ) : (
                   <div className="flex flex-col items-center justify-center text-white/30">
                     <ScanLine className="size-10" />
-                    <span className="mt-2 text-xs">Document preview</span>
                   </div>
                 )}
               </div>
