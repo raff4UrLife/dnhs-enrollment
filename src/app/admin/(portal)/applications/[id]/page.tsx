@@ -2,15 +2,17 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { getCurrentStaff } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { StatusBadge } from "../_components/status-badge";
+import { ReferenceProvider } from "@/lib/enrollment/reference-context";
+import { loadReferenceData } from "@/lib/enrollment/load-reference-data";
+import { formFromRow } from "@/lib/enrollment/form-from-row";
+import { ApplicationForm } from "../_components/application-form";
+
+type Props = { params: Promise<{ id: string }> };
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-type Props = { params: Promise<{ id: string }> };
 
 export default async function ApplicationDetailPage({ params }: Props) {
   const staff = await getCurrentStaff();
@@ -20,40 +22,51 @@ export default async function ApplicationDetailPage({ params }: Props) {
   if (!UUID_RE.test(id)) notFound();
 
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("applications")
-    .select("id, lrn, last_name, first_name, middle_name, status")
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data: row }, reference] = await Promise.all([
+    admin.from("applications").select("*").eq("id", id).maybeSingle(),
+    loadReferenceData(),
+  ]);
+  if (!row) notFound();
 
-  if (!data) notFound();
+  // Teachers are view-only, and only pending applications can be edited
+  const canEdit = staff.role === "admin" || staff.role === "staff";
+  let readOnlyReason: string | null = null;
+  if (!canEdit) {
+    readOnlyReason =
+      "You have view-only access, so this application cannot be edited.";
+  } else if (row.status !== "pending") {
+    readOnlyReason =
+      "This application is already approved, so it can no longer be edited.";
+  }
 
-  const fullName = `${data.last_name}, ${data.first_name}${
-    data.middle_name ? ` ${data.middle_name}` : ""
-  }`;
+  const fullName = [row.last_name, row.first_name].filter(Boolean).join(", ");
 
   return (
     <div className="space-y-6">
-      <Button render={<Link href="/admin/applications" />} size="sm">
-        <ArrowLeft className="size-4" />
-        Back to applications
-      </Button>
-
       <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-serif text-2xl font-semibold text-foreground">
-            {fullName}
-          </h1>
-          <StatusBadge status={data.status as "pending" | "approved"} />
-        </div>
-        <p className="mt-1 font-mono text-sm text-muted-foreground">
-          LRN {data.lrn}
+        <Link
+          href="/admin/applications"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          Back to applications
+        </Link>
+        <h1 className="mt-3 font-serif text-2xl font-semibold text-foreground">
+          {fullName || "Application"}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          LRN {row.lrn} · {row.status === "approved" ? "Approved" : "Pending"}
         </p>
       </div>
 
-      <div className="rounded-md border border-dashed border-black/20 bg-white p-10 text-center text-sm text-muted-foreground">
-        The pre-filled enrollment form will be shown here.
-      </div>
+      <ReferenceProvider value={reference}>
+        <ApplicationForm
+          mode="edit"
+          applicationId={row.id}
+          initialData={formFromRow(row)}
+          readOnlyReason={readOnlyReason}
+        />
+      </ReferenceProvider>
     </div>
   );
 }

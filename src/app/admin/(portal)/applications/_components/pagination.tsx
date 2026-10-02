@@ -38,8 +38,8 @@ export function Pagination({ page, total, pageSize }: Props) {
 
       <div className="flex items-center gap-2">
         <Button
+          className="bg-sky-500"
           type="button"
-          variant="outline"
           size="sm"
           disabled={page <= 1 || isPending}
           onClick={() => goTo(page - 1)}
@@ -50,14 +50,14 @@ export function Pagination({ page, total, pageSize }: Props) {
 
         <span
           aria-current="page"
-          className="flex h-8 min-w-8 items-center justify-center rounded-md bg-primary px-2 text-sm font-semibold text-primary-foreground"
+          className="flex h-8 min-w-8 items-center justify-center rounded-md bg-sky-500 px-2 text-sm font-semibold text-primary-foreground"
         >
           {page}
         </span>
 
         <Button
+          className="bg-sky-500"
           type="button"
-          variant="outline"
           size="sm"
           disabled={page >= totalPages || isPending}
           onClick={() => goTo(page + 1)}

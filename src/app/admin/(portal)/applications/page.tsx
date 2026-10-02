@@ -1,5 +1,7 @@
 //src/app/admin/(portal)/applications/page.tsx
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { UserPlus } from "lucide-react";
 import { getCurrentStaff } from "@/lib/auth/require-role";
 import { parseApplicationParams } from "./_lib/search-params";
 import { getApplications } from "./_lib/queries";
@@ -17,7 +19,7 @@ type Props = {
 export default async function ApplicationsPage({ searchParams }: Props) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
-  // Admin and staff can approve; teachers are view-only
+  // Admin and staff can approve and add students; teachers are view-only
   const canApprove = staff.role === "admin" || staff.role === "staff";
 
   // Read and validate ?q=...&page=...&gender=... from the URL
@@ -28,20 +30,43 @@ export default async function ApplicationsPage({ searchParams }: Props) {
     getFilterConfigs(),
   ]);
 
-  // Is a search or any filter active? (everything except the page number)
+  // The school year being shown: the one picked in the filter, or the active one
+  const yearConfig = filterConfigs.find((c) => c.param === "schoolyear");
+  const selectedYearId = filters.schoolYear ?? yearConfig?.defaultValue;
+  const yearName = yearConfig?.options.find(
+    (o) => o.value === selectedYearId,
+  )?.label;
+
+  // Is a search or any filter active? (everything except the page number
+  // and the school year, which is always set)
   const hasFilters = Object.entries(filters).some(
-    ([key, v]) => key !== "page" && v !== null && v !== "",
+    ([key, v]) =>
+      key !== "page" && key !== "schoolYear" && v !== null && v !== "",
   );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold text-foreground">
-          Applications
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Enrollment applications for the active school year.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold text-foreground">
+            Applications
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {yearName
+              ? `Enrollment applications for S.Y. ${yearName}`
+              : "No active school year is set."}
+          </p>
+        </div>
+
+        {canApprove && (
+          <Link
+            href="/admin/applications/new"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <UserPlus className="size-4" />
+            Add New Student
+          </Link>
+        )}
       </div>
 
       <ApplicationsToolbar filters={filterConfigs} />

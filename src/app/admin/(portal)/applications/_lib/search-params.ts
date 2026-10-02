@@ -1,3 +1,4 @@
+// //src/app/admin/(portal)/applications/_lib/search-params.ts
 // Reads and validates the URL query (?q=...&page=...&gender=...)
 
 type RawParams = Record<string, string | string[] | undefined>;
@@ -5,6 +6,7 @@ type RawParams = Record<string, string | string[] | undefined>;
 export type ApplicationFilters = {
   q: string; // search text (LRN or name)
   page: number;
+  schoolYear: string | null; // school_years.id (null = the active school year)
   grade: number | null; // 7-12
   strand: string | null; // strands.id
   barangay: string | null; // barangays.id
@@ -69,6 +71,7 @@ export function parseApplicationParams(raw: RawParams): ApplicationFilters {
   return {
     q: cleanSearch(first(raw.q)),
     page: parsePage(raw.page),
+    schoolYear: parseUuid(raw.schoolyear),
     grade: parseGrade(raw.grade),
     strand: parseUuid(raw.strand),
     barangay: parseUuid(raw.barangay),

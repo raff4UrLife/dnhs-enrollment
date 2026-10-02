@@ -2,7 +2,7 @@ import type { ApplicationRow } from "../_lib/types";
 import { ApplicationTableRow } from "./application-row";
 
 const HEADERS = [
-  "View",
+  "View Details",
   "LRN",
   "Name",
   "Grade level",

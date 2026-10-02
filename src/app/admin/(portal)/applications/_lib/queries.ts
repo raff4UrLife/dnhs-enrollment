@@ -1,3 +1,5 @@
+//src/app/admin/(portal)/applications/_lib/queries.ts
+// (only the start of getApplications changes)
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ApplicationFilters } from "./search-params";
@@ -20,21 +22,27 @@ export async function getApplications(
 ): Promise<ApplicationsResult> {
   const admin = createAdminClient();
 
-  // Only the active school year
-  const { data: year } = await admin
-    .from("school_years")
-    .select("id")
-    .eq("is_active", true)
-    .maybeSingle();
+  // The school year picked in the filter, or the active one when none is picked
+  let schoolYearId: string | null = f.schoolYear;
 
-  if (!year) return { rows: [], total: 0, page: 1 };
-  const schoolYearId: string = year.id;
+  if (!schoolYearId) {
+    const { data: year } = await admin
+      .from("school_years")
+      .select("id")
+      .eq("is_active", true)
+      .maybeSingle();
+    schoolYearId = year?.id ?? null;
+  }
+
+  // No school year picked and none active: nothing to show
+  if (!schoolYearId) return { rows: [], total: 0, page: 1 };
+  const yearId: string = schoolYearId;
 
   async function run(page: number) {
     let query = admin
       .from("applications")
       .select(COLUMNS, { count: "exact" })
-      .eq("school_year_id", schoolYearId);
+      .eq("school_year_id", yearId);
 
     // Every word must match LRN or one of the name columns,
     // so "juan cruz" finds Cruz, Juan

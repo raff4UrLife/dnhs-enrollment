@@ -1,3 +1,4 @@
+// src/app/admin/(portal)/layout.tsx
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { getCurrentStaff } from "@/lib/auth/require-role";
@@ -12,9 +13,9 @@ export default async function AdminPortalLayout({
   if (!staff) redirect("/admin/login");
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex h-screen overflow-hidden bg-slate-100">
       <AdminSidebar role={staff.role} />
-      <main className="flex-1 p-6">{children}</main>
+      <main className="min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
     </div>
   );
 }

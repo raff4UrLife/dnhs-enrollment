@@ -11,9 +11,11 @@ import { useQueryParams } from "./use-query-params";
 export function ApplicationsToolbar({ filters }: { filters: FilterConfig[] }) {
   const { searchParams, setParams } = useQueryParams();
 
-  // The first filter (Status) sits beside the search box, the rest go below
-  const [primary, ...others] = filters;
+  // School year and Status sit beside the search box, the rest go below
+  const [schoolYear, status, ...others] = filters;
 
+  // The School year param only appears in the URL when it is not the active
+  // year, so this is true only when something differs from the default view
   const hasActive =
     searchParams.has("q") || filters.some((f) => searchParams.has(f.param));
 
@@ -26,13 +28,19 @@ export function ApplicationsToolbar({ filters }: { filters: FilterConfig[] }) {
   return (
     <div className="rounded-md border border-black/5 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <SearchInput />
         </div>
 
-        {primary && (
-          <div className="sm:w-48">
-            <FilterSelect config={primary} />
+        {schoolYear && (
+          <div className="sm:w-36">
+            <FilterSelect config={schoolYear} />
+          </div>
+        )}
+
+        {status && (
+          <div className="sm:w-44">
+            <FilterSelect config={status} />
           </div>
         )}
 
