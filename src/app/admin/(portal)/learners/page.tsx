@@ -8,7 +8,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold">Hello, {staff.role}</h1>
-      <p className="mt-2 text-muted-foreground">This is the Learners record</p>
+      <p className="mt-2 text-muted-foreground">This is the LEARNERS RECORDS</p>
     </div>
   );
 }
