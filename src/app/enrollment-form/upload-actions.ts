@@ -4,12 +4,23 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const MAX_BYTES = 1024 * 1024; // 1 MB per file for public applicants
+const TOTAL_MAX_BYTES = 4 * 1024 * 1024; // 4 MB per application for public applicants
 const UPLOAD_WINDOW_MS = 30 * 60 * 1000; // uploads allowed for 30 minutes after submitting
+
+// Profile picture: images only
 const IMAGE_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
 };
+// Documents: images or PDF (scanner output is PDF)
+const DOC_EXT: Record<string, string> = {
+  ...IMAGE_EXT,
+  "application/pdf": "pdf",
+};
+const IMAGE_EXTS = Object.values(IMAGE_EXT);
+const DOC_EXTS = Object.values(DOC_EXT);
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -30,9 +41,11 @@ export type FinalizeResult =
   | { ok: true; profilePicture: boolean; documents: number; rejected: string[] }
   | { ok: false; error: string };
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
 // Only a freshly submitted, still-pending online application may receive files.
 async function checkOpenApplication(
-  admin: ReturnType<typeof createAdminClient>,
+  admin: AdminClient,
   applicationId: string,
 ): Promise<string | null> {
   if (!UUID_RE.test(applicationId)) return "Invalid application.";
@@ -55,6 +68,32 @@ async function checkOpenApplication(
   return null;
 }
 
+// The slot keeps one fixed path. If the new file has a different extension,
+// remove the old variants first so no orphan file is left behind.
+async function removeOtherVariants(
+  admin: AdminClient,
+  bucket: "profile-pictures" | "documents",
+  basePath: string,
+  keepExt: string,
+  allExts: string[],
+): Promise<boolean> {
+  const stale = allExts
+    .filter((e) => e !== keepExt)
+    .map((e) => `${basePath}.${e}`);
+  if (stale.length === 0) return true;
+  const { error } = await admin.storage.from(bucket).remove(stale);
+  if (error) {
+    console.error(
+      "[uploads] step=remove-old-variants",
+      bucket,
+      basePath,
+      error,
+    );
+    return false;
+  }
+  return true;
+}
+
 export async function createUploadUrls(
   applicationId: string,
   files: {
@@ -68,9 +107,7 @@ export async function createUploadUrls(
     const blocked = await checkOpenApplication(admin, applicationId);
     if (blocked) return { ok: false, error: blocked };
 
-    const checkMeta = (meta: FileMeta): string | null => {
-      if (!IMAGE_EXT[meta.type])
-        return "Only JPG, PNG, or WebP images are allowed.";
+    const checkSize = (meta: FileMeta): string | null => {
       if (
         !Number.isFinite(meta.size) ||
         meta.size <= 0 ||
@@ -81,14 +118,46 @@ export async function createUploadUrls(
       return null;
     };
 
+    const docs = files.documents ?? [];
+    if (docs.length > 10) return { ok: false, error: "Too many files." };
+
+    // Total size for the whole application
+    const totalSize =
+      (files.profilePicture?.size ?? 0) +
+      docs.reduce((sum, d) => sum + (Number.isFinite(d.size) ? d.size : 0), 0);
+    if (totalSize > TOTAL_MAX_BYTES) {
+      return { ok: false, error: "Total upload size must be 4 MB or smaller." };
+    }
+
     const uploads: UploadLink[] = [];
 
-    // Profile picture
+    // Profile picture (images only)
     if (files.profilePicture) {
-      const problem = checkMeta(files.profilePicture);
-      if (problem) return { ok: false, error: problem };
+      const meta = files.profilePicture;
+      if (!IMAGE_EXT[meta.type]) {
+        return {
+          ok: false,
+          error: "The profile picture must be a JPG, PNG, or WebP image.",
+        };
+      }
+      const sizeProblem = checkSize(meta);
+      if (sizeProblem) return { ok: false, error: sizeProblem };
 
-      const path = `applications/${applicationId}.${IMAGE_EXT[files.profilePicture.type]}`;
+      const ext = IMAGE_EXT[meta.type];
+      const base = `applications/${applicationId}`;
+
+      const cleaned = await removeOtherVariants(
+        admin,
+        "profile-pictures",
+        base,
+        ext,
+        IMAGE_EXTS,
+      );
+      if (!cleaned) {
+        return { ok: false, error: "Could not prepare the photo upload." };
+      }
+
+      const path = `${base}.${ext}`;
       const { data, error } = await admin.storage
         .from("profile-pictures")
         .createSignedUploadUrl(path, { upsert: true });
@@ -104,10 +173,7 @@ export async function createUploadUrls(
       });
     }
 
-    // Documents
-    const docs = files.documents ?? [];
-    if (docs.length > 10) return { ok: false, error: "Too many files." };
-
+    // Documents (images or PDF)
     const ids = docs.map((d) => d.documentTypeId);
     if (
       new Set(ids).size !== ids.length ||
@@ -131,10 +197,30 @@ export async function createUploadUrls(
     }
 
     for (const doc of docs) {
-      const problem = checkMeta(doc);
-      if (problem) return { ok: false, error: problem };
+      if (!DOC_EXT[doc.type]) {
+        return {
+          ok: false,
+          error: "Documents must be a JPG, PNG, WebP image, or a PDF.",
+        };
+      }
+      const sizeProblem = checkSize(doc);
+      if (sizeProblem) return { ok: false, error: sizeProblem };
 
-      const path = `applications/${applicationId}/${doc.documentTypeId}.${IMAGE_EXT[doc.type]}`;
+      const ext = DOC_EXT[doc.type];
+      const base = `applications/${applicationId}/${doc.documentTypeId}`;
+
+      const cleaned = await removeOtherVariants(
+        admin,
+        "documents",
+        base,
+        ext,
+        DOC_EXTS,
+      );
+      if (!cleaned) {
+        return { ok: false, error: "Could not prepare a document upload." };
+      }
+
+      const path = `${base}.${ext}`;
       const { data, error } = await admin.storage
         .from("documents")
         .createSignedUploadUrl(path, { upsert: true });
@@ -188,7 +274,8 @@ export async function finalizeUploads(
       if (pic) {
         const path = `applications/${pic.name}`;
         const size = Number(pic.metadata?.size ?? 0);
-        if (size > MAX_BYTES) {
+        const mime = pic.metadata?.mimetype as string | undefined;
+        if (size > MAX_BYTES || (mime && !IMAGE_EXT[mime])) {
           await admin.storage.from("profile-pictures").remove([path]);
           rejected.push("profile picture");
         } else {
@@ -216,7 +303,8 @@ export async function finalizeUploads(
 
       const path = `applications/${applicationId}/${file.name}`;
       const size = Number(file.metadata?.size ?? 0);
-      if (size > MAX_BYTES) {
+      const mime = file.metadata?.mimetype as string | undefined;
+      if (size > MAX_BYTES || (mime && !DOC_EXT[mime])) {
         await admin.storage.from("documents").remove([path]);
         rejected.push(file.name);
         continue;
