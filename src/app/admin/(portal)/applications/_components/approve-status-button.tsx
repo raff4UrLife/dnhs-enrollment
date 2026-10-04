@@ -64,8 +64,8 @@ export function ApproveStatusButton({ applicationId, studentName }: Props) {
             <DialogTitle>Approve application?</DialogTitle>
             <DialogDescription>
               You are about to approve the application of{" "}
-              <span className="font-medium text-foreground">{studentName}</span>
-              . This cannot be undone.
+              <span className="font-medium text-primary">{studentName}</span>.
+              This cannot be undone.
             </DialogDescription>
           </DialogHeader>
 

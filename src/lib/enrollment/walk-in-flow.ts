@@ -1,5 +1,5 @@
 // src/lib/enrollment/walk-in-flow.ts
-import { approveApplication } from "@/app/admin/applications/actions";
+import { approveApplication } from "@/app/admin/(portal)/applications/_lib/actions";
 import { createWalkInDraft } from "@/app/admin/applications/walk-in-actions";
 import { updateApplication } from "@/app/admin/(portal)/applications/[id]/actions";
 import {

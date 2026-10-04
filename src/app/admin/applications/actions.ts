@@ -14,25 +14,6 @@ import type { ApplicationFormData } from "@/lib/enrollment/types";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function approveApplication(
-  applicationId: string,
-): Promise<ApproveResult> {
-  try {
-    // Only active admin/staff can approve (teachers are rejected)
-    const staff = await requireRole("admin", "staff");
-    const admin = createAdminClient();
-
-    const result = await approveApplicationCore(admin, applicationId, staff.id);
-
-    if (result.ok) revalidatePath("/admin/applications");
-    return result;
-  } catch (err) {
-    if (err instanceof AuthError) return { ok: false, error: err.message };
-    console.error("[approveApplication] unexpected", applicationId, err);
-    return { ok: false, error: "Something went wrong. Please try again." };
-  }
-}
-
 // clientId is optional: the offline queue can mint a UUID in the browser so a retried sync never creates a duplicate.
 export async function createWalkInApplication(
   input: ApplicationFormData,

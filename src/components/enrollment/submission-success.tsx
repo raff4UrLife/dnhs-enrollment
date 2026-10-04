@@ -29,8 +29,10 @@ export function SubmissionSuccess({
         </h1>
         <p className="mt-3 text-white/70">
           Your application has been received and is marked{" "}
-          <strong className="text-white">pending</strong>. Please bring your
-          original requirements to the school for verification.
+          <strong className="text-white">pending</strong>. Please go to the
+          school within <strong className="text-white">7 days</strong> and bring
+          your original requirements for verification. Applications not verified
+          within 7 days are removed automatically.
         </p>
 
         {notUploaded.length > 0 && (

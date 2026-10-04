@@ -6,6 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildApplicationRow } from "@/lib/enrollment/application-row";
 import type { ApplicationFormData } from "@/lib/enrollment/types";
 
+// Used when the settings value can't be read, so no application is ever saved without an expiry
+const DEFAULT_EXPIRY_DAYS = 7;
+
 export type SubmitResult =
   | { ok: true; applicationId: string }
   | { ok: false; error: string };
@@ -38,25 +41,34 @@ export async function submitApplication(
     const built = buildApplicationRow(input, schoolYear.id);
     if (!built.ok) return { ok: false, error: built.error };
 
-    // 3) Pending applications expire after settings.pending_application_expiry_days
+    // 3) Pending applications expire after settings.pending_application_expiry_days.
+    //    If that can't be read (or is not a positive number), fall back to the default.
     const { data: settings, error: settingsErr } = await admin
       .from("settings")
       .select("pending_application_expiry_days")
       .eq("id", 1)
       .maybeSingle();
 
-    let expiresAt: string | null = null;
+    let days = DEFAULT_EXPIRY_DAYS;
     if (settingsErr || !settings) {
       console.error(
-        "[submitApplication] step=settings (saving without expiry)",
+        `[submitApplication] step=settings (using default ${DEFAULT_EXPIRY_DAYS} days)`,
         settingsErr,
       );
     } else {
-      const days = settings.pending_application_expiry_days as number;
-      expiresAt = new Date(
-        Date.now() + days * 24 * 60 * 60 * 1000,
-      ).toISOString();
+      const configured = Number(settings.pending_application_expiry_days);
+      if (Number.isFinite(configured) && configured > 0) {
+        days = configured;
+      } else {
+        console.error(
+          `[submitApplication] step=settings invalid value (using default ${DEFAULT_EXPIRY_DAYS} days)`,
+          settings.pending_application_expiry_days,
+        );
+      }
     }
+    const expiresAt = new Date(
+      Date.now() + days * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     // 4) Save. Channel and status are set here, never taken from the form.
     const id = crypto.randomUUID();
