@@ -1,8 +1,9 @@
 // src/lib/enrollment/approve.ts
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-
-const SECTION_SOFT_CAP = 40; // recommended size, not a hard limit
+import { sendEnrollmentEmail } from "@/lib/enrollment/enrollment-email";
+import { pickSection } from "@/lib/enrollment/sectioning";
+import { loadSectionCandidates } from "@/lib/enrollment/section-data";
 
 const LEARNER_FIELDS = [
   "lrn",
@@ -119,60 +120,24 @@ export async function approveApplicationCore(
     );
 
   if (!existingEnrollment) {
-    // 3) Pick a section: first one with room (by section_order); if all are full, the least filled
-    let sectionQuery = admin
-      .from("sections")
-      .select("id, section_order")
-      .eq("school_year_id", app.school_year_id)
-      .eq("grade_level", app.grade_level);
-    sectionQuery = app.track_id
-      ? sectionQuery.eq("track_id", app.track_id)
-      : sectionQuery.is("track_id", null);
-    sectionQuery = app.strand_id
-      ? sectionQuery.eq("strand_id", app.strand_id)
-      : sectionQuery.is("strand_id", null);
+    // 3) Pick a section by general average
+    // (rule: sectioning.ts, data: section-data.ts)
+    const loaded = await loadSectionCandidates(admin, {
+      schoolYearId: app.school_year_id,
+      gradeLevel: app.grade_level,
+      trackId: app.track_id,
+      strandId: app.strand_id,
+    });
+    if (!loaded.ok) return fail("load-sections", loaded.error, loaded.error);
 
-    const { data: sections, error: secErr } = await sectionQuery;
-    if (secErr)
-      return fail("load-sections", secErr, "Could not load sections.");
-    if (!sections || sections.length === 0) {
+    const sectionId = pickSection(loaded.candidates, Number(app.average));
+    if (!sectionId) {
       return fail(
         "load-sections",
         "none found",
         "Cannot approve: no section exists for this school year, grade level, track and strand.",
       );
     }
-
-    const { data: enrolled, error: countErr } = await admin
-      .from("enrollments")
-      .select("section_id")
-      .in(
-        "section_id",
-        sections.map((s) => s.id),
-      );
-    if (countErr)
-      return fail(
-        "count-enrollments",
-        countErr,
-        "Could not count section enrollments.",
-      );
-
-    const counts = new Map<string, number>();
-    for (const row of enrolled ?? []) {
-      counts.set(row.section_id, (counts.get(row.section_id) ?? 0) + 1);
-    }
-
-    const withRoom = sections
-      .filter((s) => (counts.get(s.id) ?? 0) < SECTION_SOFT_CAP)
-      .sort((a, b) => a.section_order - b.section_order);
-
-    const chosen =
-      withRoom[0] ??
-      [...sections].sort(
-        (a, b) =>
-          (counts.get(a.id) ?? 0) - (counts.get(b.id) ?? 0) ||
-          a.section_order - b.section_order,
-      )[0];
 
     // 4) Create or update the learner (keyed by LRN)
     const { data: existingLearner, error: lookupErr } = await admin
@@ -210,7 +175,7 @@ export async function approveApplicationCore(
     const { error: enrollErr } = await admin.from("enrollments").insert({
       learner_id: learner.id,
       school_year_id: app.school_year_id,
-      section_id: chosen.id,
+      section_id: sectionId,
       grade_level: app.grade_level,
       average: app.average,
       track_id: app.track_id,
@@ -258,7 +223,46 @@ export async function approveApplicationCore(
         "Enrollment was created but the status update failed. Please click Approve again.",
       );
     }
+
+    // 7) Tell the student (only when an email was given). Never blocks approval.
+    await notifyStudent(admin, app);
   }
 
   return { ok: true, message: "Application approved and learner enrolled." };
+}
+
+// Sends the "you are now enrolled" email if the applicant gave an email address.
+// Any problem is only logged: the enrollment already succeeded.
+async function notifyStudent(
+  admin: SupabaseClient,
+  app: {
+    email: string | null;
+    first_name: string;
+    grade_level: number;
+    school_year_id: string;
+  },
+): Promise<void> {
+  const to = app.email?.trim();
+  if (!to) return;
+
+  try {
+    const { data: year, error } = await admin
+      .from("school_years")
+      .select("name")
+      .eq("id", app.school_year_id)
+      .maybeSingle();
+    if (error || !year) {
+      console.error("[approveApplicationCore] step=email-school-year", error);
+      return;
+    }
+
+    await sendEnrollmentEmail({
+      to,
+      firstName: app.first_name,
+      schoolYear: year.name,
+      gradeLevel: app.grade_level,
+    });
+  } catch (err) {
+    console.error("[approveApplicationCore] step=email unexpected", err);
+  }
 }

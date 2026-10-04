@@ -319,7 +319,7 @@ export function Step5Documents({
                       <img
                         src={docPreview}
                         alt={`${d.name} preview`}
-                        className="size-full object-contain"
+                        className="size-full object-cover"
                       />
                       {isPdf && (
                         <span className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
