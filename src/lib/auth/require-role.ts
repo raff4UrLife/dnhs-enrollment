@@ -9,6 +9,7 @@ export type Role = "admin" | "staff" | "teacher";
 export type CurrentStaff = {
   id: string; // whitelisted_users.id (use this for reviewed_by)
   email: string | null;
+  name: string | null;
   role: Role;
 };
 
@@ -32,22 +33,27 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
     const admin = createAdminClient();
     const { data, error } = await admin
       .from("whitelisted_users")
-      .select("id, email, role")
+      .select("id, email, username, role")
       .eq("status", "active")
       .ilike("email", escaped)
       .maybeSingle();
 
     if (!error && data) {
-      return { id: data.id, email: data.email, role: data.role as Role };
+      return {
+        id: data.id,
+        email: data.email,
+        name: data.username ?? data.email ?? "Staff",
+        role: data.role as Role,
+      };
     }
   }
-
   // 2) Username/password login (our own session cookie)
   const sessionUser = await getSessionUser();
   if (sessionUser) {
     return {
       id: sessionUser.id,
       email: sessionUser.email,
+      name: sessionUser.username ?? sessionUser.email ?? "Staff",
       role: sessionUser.role,
     };
   }

@@ -1,3 +1,4 @@
+// src/lib/auth/logout.ts
 "use server";
 
 import { redirect } from "next/navigation";

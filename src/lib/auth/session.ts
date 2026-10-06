@@ -1,3 +1,4 @@
+// src/lib/auth/session.ts
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cookies, headers } from "next/headers";
@@ -10,6 +11,7 @@ const SESSION_HOURS = 8; // one school workday
 export type SessionUser = {
   id: string; // whitelisted_users.id
   email: string | null;
+  username: string | null;
   role: Role;
 };
 
@@ -59,7 +61,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("sessions")
-    .select("whitelisted_users ( id, email, role, status )")
+    .select("whitelisted_users ( id, email, username, role, status )")
     .eq("session_token", hashToken(token))
     .is("revoked_at", null)
     .gt("expires_at", new Date().toISOString())
@@ -67,15 +69,38 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   if (error || !data) return null;
 
+  //   const rel = data.whitelisted_users as unknown;
+  //   const user = (Array.isArray(rel) ? rel[0] : rel) as
+  //     | { id: string; email: string | null; role: string; status: string }
+  //     | undefined;
+
+  //   // A disabled account loses access even if its session is still valid
+  //   if (!user || user.status !== "active") return null;
+
+  //   return { id: user.id, email: user.email,
+  //     role: user.role as Role };
+  // }
+
   const rel = data.whitelisted_users as unknown;
   const user = (Array.isArray(rel) ? rel[0] : rel) as
-    | { id: string; email: string | null; role: string; status: string }
+    | {
+        id: string;
+        email: string | null;
+        username: string | null;
+        role: string;
+        status: string;
+      }
     | undefined;
 
   // A disabled account loses access even if its session is still valid
   if (!user || user.status !== "active") return null;
 
-  return { id: user.id, email: user.email, role: user.role as Role };
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role as Role,
+  };
 }
 
 // Revoke the current username session (if any) and clear the cookie.

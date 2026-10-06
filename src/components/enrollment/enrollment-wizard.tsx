@@ -227,11 +227,12 @@ export function EnrollmentWizard() {
       <div className="absolute inset-0 bg-linear-to-t from-secondary via-secondary/70 to-secondary/10" />
 
       <div className="relative mx-auto max-w-4xl px-6 py-16">
-        <p className="text-sm font-medium tracking-wide text-primary">
+        {/* <p className="text-sm font-medium tracking-wide text-primary">
           Application · SY {schoolYear.name}
-        </p>
+        </p> */}
         <h1 className="mt-2 text-3xl font-semibold text-white">
-          Enrollment Application Form
+          {/* Enrollment Application Form */}
+          Application · SY {schoolYear.name}
         </h1>
 
         <div className="mt-8">

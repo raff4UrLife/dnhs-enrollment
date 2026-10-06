@@ -9,6 +9,7 @@ import type {
 import {
   CacheFirst,
   ExpirationPlugin,
+  NetworkFirst,
   NetworkOnly,
   Serwist,
   StaleWhileRevalidate,
@@ -25,7 +26,8 @@ declare const self: ServiceWorkerGlobalScope;
 
 const DAY = 24 * 60 * 60;
 
-// Only PUBLIC static files are cached. Pages are never stored: they always come from the network.
+// Only PUBLIC static files are cached, plus the offline walk-in page (see below).
+// Every other page is never stored: it always comes from the network.
 // /auth and /api are never handled by the service worker at all, so sign-in is not affected.
 const runtimeCaching: RuntimeCaching[] = [
   {
@@ -54,8 +56,22 @@ const runtimeCaching: RuntimeCaching[] = [
     }),
   },
   {
-    // Page navigations: network only, never cached. If the network fails, the
-    // fallback below shows /~offline. /auth and /api are left alone on purpose.
+    // The ONE page that must open without internet: the offline walk-in page.
+    // Online it always loads fresh from the network (and the copy is refreshed);
+    // if the network fails or is too slow, the last saved copy is shown instead.
+    // This page holds no private data. Its data comes from this computer's browser storage.
+    // This rule must stay ABOVE the general navigation rule below.
+    matcher: ({ sameOrigin, url }) =>
+      sameOrigin && url.pathname === "/offline-walk-in",
+    handler: new NetworkFirst({
+      cacheName: "offline-walk-in-page",
+      networkTimeoutSeconds: 3,
+      plugins: [new ExpirationPlugin({ maxEntries: 5 })],
+    }),
+  },
+  {
+    // All other page navigations: network only, never cached. If the network fails,
+    // the fallback below shows /~offline. /auth and /api are left alone on purpose.
     matcher: ({ request, sameOrigin, url }) =>
       sameOrigin &&
       request.mode === "navigate" &&
@@ -96,6 +112,7 @@ serwist.addEventListeners();
 // import {
 //   CacheFirst,
 //   ExpirationPlugin,
+//   NetworkOnly,
 //   Serwist,
 //   StaleWhileRevalidate,
 // } from "serwist";
@@ -111,8 +128,8 @@ serwist.addEventListeners();
 
 // const DAY = 24 * 60 * 60;
 
-// // Only PUBLIC static files are cached. There is deliberately no rule for /admin, /auth or /api,
-// // so signed-in pages and data always come from the network and are never stored on the device.
+// // Only PUBLIC static files are cached. Pages are never stored: they always come from the network.
+// // /auth and /api are never handled by the service worker at all, so sign-in is not affected.
 // const runtimeCaching: RuntimeCaching[] = [
 //   {
 //     // App code, styles and fonts. File names change on every build, so cache-first is safe.
@@ -138,6 +155,16 @@ serwist.addEventListeners();
 //         new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * DAY }),
 //       ],
 //     }),
+//   },
+//   {
+//     // Page navigations: network only, never cached. If the network fails, the
+//     // fallback below shows /~offline. /auth and /api are left alone on purpose.
+//     matcher: ({ request, sameOrigin, url }) =>
+//       sameOrigin &&
+//       request.mode === "navigate" &&
+//       !url.pathname.startsWith("/auth") &&
+//       !url.pathname.startsWith("/api"),
+//     handler: new NetworkOnly(),
 //   },
 // ];
 

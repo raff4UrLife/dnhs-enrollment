@@ -1,3 +1,4 @@
+// src/app/admin/(portal)/applications/_lib/types.ts
 // One row in the applications table
 export type ApplicationRow = {
   id: string;

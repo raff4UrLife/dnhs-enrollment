@@ -8,22 +8,36 @@ import { buildApplicationRow } from "@/lib/enrollment/application-row";
 import type { ApplicationFormData } from "@/lib/enrollment/types";
 
 export type WalkInDraftResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; alreadyApproved: boolean }
   | { ok: false; error: string };
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Step 1 of the New page: saves the walk-in as a PENDING application and
  * returns its id. Nothing is approved here. The browser then uploads the
  * photo and documents, and calls approveApplication last, so the learner
  * record gets the profile picture.
+ *
+ * clientId (offline queue only): the id made on the computer when the walk-in
+ * was saved. If a record with that id already exists, it is this walk-in's own
+ * half-saved draft from an earlier send, so it is reused instead of being
+ * reported as a duplicate LRN. A different student's record with the same LRN
+ * is still refused.
  */
 export async function createWalkInDraft(
   input: ApplicationFormData,
+  clientId?: string,
 ): Promise<WalkInDraftResult> {
   try {
     // Only active admin/staff can encode walk-ins
     await requireRole("admin", "staff");
     const admin = createAdminClient();
+
+    if (clientId && !UUID_PATTERN.test(clientId)) {
+      return { ok: false, error: "Invalid walk-in id." };
+    }
 
     // Walk-ins go into the active school year, even if online applications are switched off
     const { data: schoolYear, error: syErr } = await admin
@@ -42,7 +56,7 @@ export async function createWalkInDraft(
     const built = buildApplicationRow(input, schoolYear.id);
     if (!built.ok) return { ok: false, error: built.error };
 
-    const id = crypto.randomUUID();
+    const id = clientId ?? crypto.randomUUID();
 
     // Channel and status are set here, never taken from the form
     const { error: insertErr } = await admin.from("applications").insert({
@@ -57,6 +71,21 @@ export async function createWalkInDraft(
     if (insertErr) {
       console.error("[createWalkInDraft] step=insert", insertErr);
       if (insertErr.code === "23505") {
+        // Is this walk-in's own record from an earlier send that was cut off?
+        if (clientId) {
+          const { data: existing } = await admin
+            .from("applications")
+            .select("id, status, channel")
+            .eq("id", clientId)
+            .maybeSingle();
+          if (existing && existing.channel === "walk-in") {
+            return {
+              ok: true,
+              id: existing.id,
+              alreadyApproved: existing.status === "approved",
+            };
+          }
+        }
         return {
           ok: false,
           error: "This LRN already has an application on file.",
@@ -66,10 +95,86 @@ export async function createWalkInDraft(
     }
 
     revalidatePath("/admin/applications");
-    return { ok: true, id };
+    return { ok: true, id, alreadyApproved: false };
   } catch (err) {
     if (err instanceof AuthError) return { ok: false, error: err.message };
     console.error("[createWalkInDraft] unexpected", err);
     return { ok: false, error: "Something went wrong. Please try again." };
   }
 }
+
+// // src/app/admin/applications/walk-in-actions.ts
+// "use server";
+
+// import { revalidatePath } from "next/cache";
+// import { requireRole, AuthError } from "@/lib/auth/require-role";
+// import { createAdminClient } from "@/lib/supabase/admin";
+// import { buildApplicationRow } from "@/lib/enrollment/application-row";
+// import type { ApplicationFormData } from "@/lib/enrollment/types";
+
+// export type WalkInDraftResult =
+//   | { ok: true; id: string }
+//   | { ok: false; error: string };
+
+// /**
+//  * Step 1 of the New page: saves the walk-in as a PENDING application and
+//  * returns its id. Nothing is approved here. The browser then uploads the
+//  * photo and documents, and calls approveApplication last, so the learner
+//  * record gets the profile picture.
+//  */
+// export async function createWalkInDraft(
+//   input: ApplicationFormData,
+// ): Promise<WalkInDraftResult> {
+//   try {
+//     // Only active admin/staff can encode walk-ins
+//     await requireRole("admin", "staff");
+//     const admin = createAdminClient();
+
+//     // Walk-ins go into the active school year, even if online applications are switched off
+//     const { data: schoolYear, error: syErr } = await admin
+//       .from("school_years")
+//       .select("id")
+//       .eq("is_active", true)
+//       .maybeSingle();
+//     if (syErr) {
+//       console.error("[createWalkInDraft] step=school-year", syErr);
+//       return { ok: false, error: "Could not check the active school year." };
+//     }
+//     if (!schoolYear)
+//       return { ok: false, error: "There is no active school year." };
+
+//     // Same validation as the public form
+//     const built = buildApplicationRow(input, schoolYear.id);
+//     if (!built.ok) return { ok: false, error: built.error };
+
+//     const id = crypto.randomUUID();
+
+//     // Channel and status are set here, never taken from the form
+//     const { error: insertErr } = await admin.from("applications").insert({
+//       ...built.row,
+//       id,
+//       channel: "walk-in",
+//       status: "pending", // becomes 'approved' later through approveApplication
+//       reviewed_by: null,
+//       reviewed_at: null,
+//       expires_at: null,
+//     });
+//     if (insertErr) {
+//       console.error("[createWalkInDraft] step=insert", insertErr);
+//       if (insertErr.code === "23505") {
+//         return {
+//           ok: false,
+//           error: "This LRN already has an application on file.",
+//         };
+//       }
+//       return { ok: false, error: "Could not save the walk-in application." };
+//     }
+
+//     revalidatePath("/admin/applications");
+//     return { ok: true, id };
+//   } catch (err) {
+//     if (err instanceof AuthError) return { ok: false, error: err.message };
+//     console.error("[createWalkInDraft] unexpected", err);
+//     return { ok: false, error: "Something went wrong. Please try again." };
+//   }
+// }
