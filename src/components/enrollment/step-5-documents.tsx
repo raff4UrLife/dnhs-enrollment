@@ -19,6 +19,7 @@ interface StepProps {
   onChange: (patch: Partial<ApplicationFiles>) => void;
   data: ApplicationFormData;
   onDataChange: (patch: Partial<ApplicationFormData>) => void;
+  showDocuments?: boolean; // false on the public form: email + photo only
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -81,14 +82,17 @@ export function getStep6Errors(
   files: ApplicationFiles,
   data: ApplicationFormData,
   documentTypes: DocumentType[],
+  requireDocuments = true,
 ) {
   const errors: Record<string, string> = {};
   if (data.email.trim() && !EMAIL_PATTERN.test(data.email.trim())) {
     errors.email = "Enter a valid email address.";
   }
-  for (const d of documentTypes) {
-    if (d.required && !files.documents[d.id]) {
-      errors[d.id] = `${d.name} is required.`;
+  if (requireDocuments) {
+    for (const d of documentTypes) {
+      if (d.required && !files.documents[d.id]) {
+        errors[d.id] = `${d.name} is required.`;
+      }
     }
   }
   return errors;
@@ -98,8 +102,12 @@ export function isStep6Valid(
   files: ApplicationFiles,
   data: ApplicationFormData,
   documentTypes: DocumentType[],
+  requireDocuments = false,
 ) {
-  return Object.keys(getStep6Errors(files, data, documentTypes)).length === 0;
+  return (
+    Object.keys(getStep6Errors(files, data, documentTypes, requireDocuments))
+      .length === 0
+  );
 }
 
 export function Step5Documents({
@@ -107,6 +115,7 @@ export function Step5Documents({
   onChange,
   data,
   onDataChange,
+  showDocuments = false,
 }: StepProps) {
   const { documentTypes } = useReference();
   const [pickErrors, setPickErrors] = useState<Record<string, string>>({});
@@ -217,10 +226,10 @@ export function Step5Documents({
   return (
     <div className="space-y-6">
       <p className="text-white/70">
-        Upload a clear scan or photo of each document. You will still need to
-        bring the originals to the school for verification.
+        {showDocuments
+          ? "Upload a clear scan or photo of each document. You will still need to bring the originals to the school for verification."
+          : "Add your email and a profile picture. Both are optional."}
       </p>
-
       <div className="grid gap-6 md:grid-cols-2">
         <div className="h-full rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
           <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
@@ -297,93 +306,97 @@ export function Step5Documents({
         </div>
       </div>
 
-      <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
-        <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
-          Required Documents
-        </h3>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {documentTypes.map((d) => {
-            const docFile = files.documents[d.id];
-            const isPdf = docFile?.type === "application/pdf";
-            const docPreview = docFile ? documentPreviewUrls[d.id] : undefined;
-            return (
-              <div
-                key={d.id}
-                className="flex flex-col rounded-md border border-white/10 bg-white/5 p-4"
-              >
-                <p className="text-sm font-medium text-white">{d.name}</p>
-                <div className="relative mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/10">
-                  {docPreview ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={docPreview}
-                        alt={`${d.name} preview`}
-                        className="size-full object-cover"
-                      />
-                      {isPdf && (
-                        <span className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                          PDF
+      {showDocuments && (
+        <div className="rounded-md border border-white/15 bg-secondary/70 p-5 backdrop-blur-sm">
+          <h3 className="border-b border-white/15 pb-2 font-serif text-sm font-semibold text-white">
+            Required Documents
+          </h3>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            {documentTypes.map((d) => {
+              const docFile = files.documents[d.id];
+              const isPdf = docFile?.type === "application/pdf";
+              const docPreview = docFile
+                ? documentPreviewUrls[d.id]
+                : undefined;
+              return (
+                <div
+                  key={d.id}
+                  className="flex flex-col rounded-md border border-white/10 bg-white/5 p-4"
+                >
+                  <p className="text-sm font-medium text-white">{d.name}</p>
+                  <div className="relative mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/10">
+                    {docPreview ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={docPreview}
+                          alt={`${d.name} preview`}
+                          className="size-full object-cover"
+                        />
+                        {isPdf && (
+                          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                            PDF
+                          </span>
+                        )}
+                      </>
+                    ) : isPdf ? (
+                      <div className="flex flex-col items-center justify-center gap-2 text-white/70">
+                        <FileText className="size-10" />
+                        <span className="rounded bg-white/15 px-2 py-0.5 text-xs font-medium">
+                          PDF scan
                         </span>
-                      )}
-                    </>
-                  ) : isPdf ? (
-                    <div className="flex flex-col items-center justify-center gap-2 text-white/70">
-                      <FileText className="size-10" />
-                      <span className="rounded bg-white/15 px-2 py-0.5 text-xs font-medium">
-                        PDF scan
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-white/30">
-                      <ScanLine className="size-10" />
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-white/30">
+                        <ScanLine className="size-10" />
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={(el) => {
+                      docInputs.current[d.id] = el;
+                    }}
+                    type="file"
+                    className="hidden"
+                    accept={IMAGE_TYPES.join(",")}
+                    onChange={(e) => handleFile(e, d.id)}
+                  />
+                  <div className="mt-3 flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-primary"
+                      onClick={() => docInputs.current[d.id]?.click()}
+                    >
+                      <Upload className="size-4" />
+                      Choose file
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-primary"
+                      onClick={() => setScanTarget(d.id)}
+                    >
+                      <ScanLine className="size-4" />
+                      Scan document
+                    </Button>
+                  </div>
+                  <p className="mt-2 truncate text-xs text-white/50">
+                    {docFile?.name ?? "No file chosen"}
+                  </p>
+                  {pickErrors[d.id] && (
+                    <p className="mt-1 text-sm text-red-400">
+                      {pickErrors[d.id]}
+                    </p>
                   )}
                 </div>
-                <input
-                  ref={(el) => {
-                    docInputs.current[d.id] = el;
-                  }}
-                  type="file"
-                  className="hidden"
-                  accept={IMAGE_TYPES.join(",")}
-                  onChange={(e) => handleFile(e, d.id)}
-                />
-                <div className="mt-3 flex flex-col gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-primary"
-                    onClick={() => docInputs.current[d.id]?.click()}
-                  >
-                    <Upload className="size-4" />
-                    Choose file
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-primary"
-                    onClick={() => setScanTarget(d.id)}
-                  >
-                    <ScanLine className="size-4" />
-                    Scan document
-                  </Button>
-                </div>
-                <p className="mt-2 truncate text-xs text-white/50">
-                  {docFile?.name ?? "No file chosen"}
-                </p>
-                {pickErrors[d.id] && (
-                  <p className="mt-1 text-sm text-red-400">
-                    {pickErrors[d.id]}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Profile photo: existing camera capture */}
       <CameraCapture

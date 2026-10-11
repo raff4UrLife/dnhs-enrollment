@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { SiteChrome } from "@/components/layout/site-chrome";
 import { SerwistProvider } from "./serwist";
+import { SwUpdater } from "@/components/layout/sw-updater";
 
 const inter = localFont({
   src: [
@@ -54,6 +55,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SerwistProvider swUrl="/serwist/sw.js">
+          <SwUpdater />
           <SiteChrome>{children}</SiteChrome>
         </SerwistProvider>
       </body>

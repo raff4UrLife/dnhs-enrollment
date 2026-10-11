@@ -292,6 +292,7 @@ export function ApplicationForm({
             onChange={changeFiles}
             data={data}
             onDataChange={updateData}
+            showDocuments
           />
         )}
       </div>

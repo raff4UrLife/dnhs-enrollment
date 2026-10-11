@@ -4,7 +4,7 @@ import { withSerwist } from "@serwist/turbopack";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  allowedDevOrigins: ["192.168.10.151"],
+  allowedDevOrigins: ["192.168.10.151:3000"],
 };
 
 export default withSerwist(nextConfig);
