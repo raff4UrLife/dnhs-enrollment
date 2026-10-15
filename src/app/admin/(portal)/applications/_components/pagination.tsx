@@ -1,3 +1,4 @@
+// src/app/admin/(portal)/applications/_components/pagination.tsx
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
