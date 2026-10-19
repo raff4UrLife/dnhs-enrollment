@@ -12,11 +12,13 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   // The login page keeps them.
   const isPortal = pathname.startsWith("/admin") && pathname !== "/admin/login";
 
-  // The offline walk-in page is a standalone screen for office PCs without
-  // internet, so it also skips the public header/footer.
-  const isOfflineWalkIn = pathname.startsWith("/offline-walk-in");
+  // The offline pages (walk-in and section rosters) are standalone screens for
+  // computers without internet, so they also skip the public header/footer.
+  const isOfflinePage =
+    pathname.startsWith("/offline-walk-in") ||
+    pathname.startsWith("/offline-sections");
 
-  if (isPortal || isOfflineWalkIn) return <>{children}</>;
+  if (isPortal || isOfflinePage) return <>{children}</>;
 
   return (
     <>
@@ -41,7 +43,11 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 //   // The login page keeps them.
 //   const isPortal = pathname.startsWith("/admin") && pathname !== "/admin/login";
 
-//   if (isPortal) return <>{children}</>;
+//   // The offline walk-in page is a standalone screen for office PCs without
+//   // internet, so it also skips the public header/footer.
+//   const isOfflineWalkIn = pathname.startsWith("/offline-walk-in");
+
+//   if (isPortal || isOfflineWalkIn) return <>{children}</>;
 
 //   return (
 //     <>

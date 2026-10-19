@@ -137,4 +137,7 @@ public/           Brand assets, PWA icons, opencv.js
 ## Team
 
 Raffy Maluya, Marvie Tamayo, Jashmine Marie Roa, Grace Alibio, Rachel Bandol.
-Adviser: Justin Aban, MIT.
+
+## Adviser
+
+Justin Aban, MIT.

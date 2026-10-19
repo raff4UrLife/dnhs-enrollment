@@ -4,6 +4,7 @@ import { getCurrentStaff } from "@/lib/auth/require-role";
 import { loadRosterData } from "@/lib/sections/roster-data";
 import type { RosterPermissions } from "@/lib/sections/types";
 import { SectionRosterConnected } from "@/components/sections/section-roster-connected";
+import RosterDataSaver from "@/components/offline/roster-data-saver";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -49,7 +50,12 @@ export default async function SectionsPage({ searchParams }: PageProps) {
       </div>
 
       {data ? (
-        <SectionRosterConnected data={data} permissions={permissions} />
+        <>
+          <SectionRosterConnected data={data} permissions={permissions} />
+          {/* Only admin and staff get an offline copy. Teachers never get the
+              offline sign-in note, so nothing is saved for them. */}
+          {canEdit && <RosterDataSaver data={data} />}
+        </>
       ) : (
         <p className="rounded-lg border bg-white px-4 py-10 text-center text-sm text-muted-foreground">
           There is no active school year yet. Set one in School Year Management.
@@ -66,7 +72,14 @@ export default async function SectionsPage({ searchParams }: PageProps) {
 // import type { RosterPermissions } from "@/lib/sections/types";
 // import { SectionRosterConnected } from "@/components/sections/section-roster-connected";
 
-// export default async function SectionsPage() {
+// const UUID_PATTERN =
+//   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// type PageProps = {
+//   searchParams: Promise<{ schoolyear?: string | string[] }>;
+// };
+
+// export default async function SectionsPage({ searchParams }: PageProps) {
 //   const staff = await getCurrentStaff();
 //   if (!staff) redirect("/admin/login");
 
@@ -78,7 +91,18 @@ export default async function SectionsPage({ searchParams }: PageProps) {
 //     canOverrideSection: canEdit,
 //   };
 
-//   const data = await loadRosterData();
+//   // The chosen school year comes from the URL. Anything that isn't a valid id
+//   // is ignored, and the loader then uses the active school year.
+//   const params = await searchParams;
+//   const raw = Array.isArray(params.schoolyear)
+//     ? params.schoolyear[0]
+//     : params.schoolyear;
+//   const requestedId = raw && UUID_PATTERN.test(raw) ? raw : undefined;
+
+//   // If the id doesn't match a school year, fall back to the active one.
+//   const data =
+//     (await loadRosterData(requestedId)) ??
+//     (requestedId ? await loadRosterData() : null);
 
 //   return (
 //     <div className="space-y-6">

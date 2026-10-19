@@ -39,25 +39,3 @@ class OfflineDb extends Dexie {
 }
 
 export const offlineDb = new OfflineDb();
-
-// // src/lib/offline/db.ts
-// import Dexie, { type Table } from "dexie";
-
-// // One row per cached chunk of data, e.g. key "reference-data".
-// export type CacheRow = {
-//   key: string;
-//   value: unknown;
-//   savedAt: number; // Date.now() when it was saved, for "offline data as of ..."
-// };
-
-// class OfflineDb extends Dexie {
-//   cache!: Table<CacheRow, string>;
-
-//   constructor() {
-//     super("dnhs-offline");
-//     // "key" is the primary key. Bump the version number if the structure ever changes.
-//     this.version(1).stores({ cache: "key" });
-//   }
-// }
-
-// export const offlineDb = new OfflineDb();

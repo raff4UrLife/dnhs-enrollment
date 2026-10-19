@@ -26,7 +26,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 const DAY = 24 * 60 * 60;
 
-// Only PUBLIC static files are cached, plus the offline walk-in page (see below).
+// Only PUBLIC static files are cached, plus the two offline pages (see below).
 // Every other page is never stored: it always comes from the network.
 // /auth and /api are never handled by the service worker at all, so sign-in is not affected.
 const runtimeCaching: RuntimeCaching[] = [
@@ -56,7 +56,7 @@ const runtimeCaching: RuntimeCaching[] = [
     }),
   },
   {
-    // The ONE page that must open without internet: the offline walk-in page.
+    // The offline walk-in page must open without internet.
     // Online it always loads fresh from the network (and the copy is refreshed);
     // if the network fails or is too slow, the last saved copy is shown instead.
     // This page holds no private data. Its data comes from this computer's browser storage.
@@ -65,6 +65,19 @@ const runtimeCaching: RuntimeCaching[] = [
       sameOrigin && url.pathname === "/offline-walk-in",
     handler: new NetworkFirst({
       cacheName: "offline-walk-in-page",
+      networkTimeoutSeconds: 3,
+      plugins: [new ExpirationPlugin({ maxEntries: 5 })],
+    }),
+  },
+  {
+    // The offline Section Rosters page, same idea as the walk-in page above.
+    // The page itself is only an empty shell: the learners' names and grades
+    // live in this computer's browser storage, not in this cached copy.
+    // This rule must also stay ABOVE the general navigation rule below.
+    matcher: ({ sameOrigin, url }) =>
+      sameOrigin && url.pathname === "/offline-sections",
+    handler: new NetworkFirst({
+      cacheName: "offline-sections-page",
       networkTimeoutSeconds: 3,
       plugins: [new ExpirationPlugin({ maxEntries: 5 })],
     }),
@@ -112,6 +125,7 @@ serwist.addEventListeners();
 // import {
 //   CacheFirst,
 //   ExpirationPlugin,
+//   NetworkFirst,
 //   NetworkOnly,
 //   Serwist,
 //   StaleWhileRevalidate,
@@ -128,7 +142,8 @@ serwist.addEventListeners();
 
 // const DAY = 24 * 60 * 60;
 
-// // Only PUBLIC static files are cached. Pages are never stored: they always come from the network.
+// // Only PUBLIC static files are cached, plus the offline walk-in page (see below).
+// // Every other page is never stored: it always comes from the network.
 // // /auth and /api are never handled by the service worker at all, so sign-in is not affected.
 // const runtimeCaching: RuntimeCaching[] = [
 //   {
@@ -157,8 +172,22 @@ serwist.addEventListeners();
 //     }),
 //   },
 //   {
-//     // Page navigations: network only, never cached. If the network fails, the
-//     // fallback below shows /~offline. /auth and /api are left alone on purpose.
+//     // The ONE page that must open without internet: the offline walk-in page.
+//     // Online it always loads fresh from the network (and the copy is refreshed);
+//     // if the network fails or is too slow, the last saved copy is shown instead.
+//     // This page holds no private data. Its data comes from this computer's browser storage.
+//     // This rule must stay ABOVE the general navigation rule below.
+//     matcher: ({ sameOrigin, url }) =>
+//       sameOrigin && url.pathname === "/offline-walk-in",
+//     handler: new NetworkFirst({
+//       cacheName: "offline-walk-in-page",
+//       networkTimeoutSeconds: 3,
+//       plugins: [new ExpirationPlugin({ maxEntries: 5 })],
+//     }),
+//   },
+//   {
+//     // All other page navigations: network only, never cached. If the network fails,
+//     // the fallback below shows /~offline. /auth and /api are left alone on purpose.
 //     matcher: ({ request, sameOrigin, url }) =>
 //       sameOrigin &&
 //       request.mode === "navigate" &&
