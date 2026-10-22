@@ -141,9 +141,14 @@ function pickFields(row: Record<string, unknown>): SectionFields {
   };
 }
 
+// function refresh() {
+//   revalidatePath("/admin/sections");
+//   revalidatePath("/admin/sections/manage");
+// }
+
 function refresh() {
+  revalidatePath("/admin/manage-sections");
   revalidatePath("/admin/sections");
-  revalidatePath("/admin/sections/manage");
 }
 
 const DUPLICATE_NAME =

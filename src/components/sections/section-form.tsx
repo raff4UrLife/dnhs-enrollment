@@ -8,6 +8,12 @@ import {
   updateSection,
   type SectionInput,
 } from "@/app/admin/(portal)/manage-sections/actions";
+import {
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { ManageSection, ManageStrand } from "@/lib/sections/manage-data";
 
 type Props = {
@@ -21,8 +27,11 @@ type Props = {
 
 const GRADES = [7, 8, 9, 10, 11, 12];
 
+// const fieldClass =
+//   "h-10 w-full rounded-md border border-input bg-white px-3 text-sm disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
+
 const fieldClass =
-  "h-10 w-full rounded-md border border-input bg-white px-3 text-sm disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
+  "h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/70";
 
 export default function SectionForm({
   schoolYearId,
@@ -85,144 +94,149 @@ export default function SectionForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 rounded-md border border-black/10 bg-white p-5 shadow-sm"
-    >
-      <h2 className="font-serif text-lg font-semibold">
-        {isEdit ? `Edit ${section?.name}` : "Add a section"}
-      </h2>
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <DialogHeader>
+        <DialogTitle>
+          {isEdit ? `Edit ${section?.name}` : "Add a section"}
+        </DialogTitle>
+      </DialogHeader>
 
-      {locked && (
-        <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-          Grade level and strand are locked because this section has{" "}
-          {section?.enrollmentCount} enrollment
-          {section?.enrollmentCount === 1 ? "" : "s"}. Move the learners to
-          another section first if you need to change them.
-        </p>
-      )}
+      <DialogBody className="space-y-4 pb-4 pt-4">
+        {locked && (
+          <p className="rounded-md bg-white/10 px-3 py-2 text-sm text-white/80">
+            Grade level and strand are locked because this section has{" "}
+            {section?.enrollmentCount} enrollment
+            {section?.enrollmentCount === 1 ? "" : "s"}. Move the learners to
+            another section first if you need to change them.
+          </p>
+        )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="space-y-1.5 text-sm font-medium">
-          Grade level
-          <select
-            className={fieldClass}
-            value={gradeLevel}
-            disabled={locked || isPending}
-            onChange={(e) => setGradeLevel(e.target.value)}
-          >
-            {GRADES.map((grade) => (
-              <option key={grade} value={grade}>
-                Grade {grade}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {isSeniorHigh && (
+        <div className="grid gap-4 sm:grid-cols-2 [&>label]:text-primary">
           <label className="space-y-1.5 text-sm font-medium">
-            Strand
+            Grade level
             <select
               className={fieldClass}
-              value={strandId}
+              value={gradeLevel}
               disabled={locked || isPending}
-              onChange={(e) => setStrandId(e.target.value)}
+              onChange={(e) => setGradeLevel(e.target.value)}
             >
-              <option value="">Choose a strand</option>
-              {[...strandGroups.entries()].map(([group, items]) => (
-                <optgroup key={group} label={group}>
-                  {items.map((strand) => (
-                    <option key={strand.id} value={strand.id}>
-                      {strand.name}
-                    </option>
-                  ))}
-                </optgroup>
+              {GRADES.map((grade) => (
+                <option key={grade} value={grade}>
+                  Grade {grade}
+                </option>
               ))}
             </select>
           </label>
+
+          {isSeniorHigh && (
+            <label className="space-y-1.5 text-sm font-medium">
+              Strand
+              <select
+                className={fieldClass}
+                value={strandId}
+                disabled={locked || isPending}
+                onChange={(e) => setStrandId(e.target.value)}
+              >
+                <option value="">Choose a strand</option>
+                {[...strandGroups.entries()].map(([group, items]) => (
+                  <optgroup key={group} label={group}>
+                    {items.map((strand) => (
+                      <option key={strand.id} value={strand.id}>
+                        {strand.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="space-y-1.5 text-sm font-medium">
+            Section name
+            <input
+              className={fieldClass}
+              value={sectionName}
+              maxLength={100}
+              disabled={isPending}
+              onChange={(e) => setSectionName(e.target.value)}
+              placeholder="e.g. Mt. Arayat"
+            />
+          </label>
+
+          <label className="space-y-1.5 text-sm font-medium">
+            Adviser
+            <input
+              className={fieldClass}
+              value={teacherName}
+              maxLength={100}
+              disabled={isPending}
+              onChange={(e) => setTeacherName(e.target.value)}
+              placeholder="Adviser's full name"
+            />
+          </label>
+
+          <label className="space-y-1.5 text-sm font-medium">
+            Section order
+            <input
+              className={fieldClass}
+              type="number"
+              min={1}
+              step={1}
+              value={sectionOrder}
+              disabled={isPending}
+              onChange={(e) => setSectionOrder(e.target.value)}
+            />
+            <span className="block text-xs font-normal text-white/60">
+              1 fills first. Learners go to the next order once a section is
+              full.
+            </span>
+          </label>
+
+          <label className="space-y-1.5 text-sm font-medium">
+            Capacity
+            <input
+              className={fieldClass}
+              type="number"
+              min={1}
+              step={1}
+              value={capacity}
+              disabled={isPending}
+              onChange={(e) => setCapacity(e.target.value)}
+            />
+            <span className="block text-xs font-normal text-muted-foreground">
+              A soft limit. Going over it only shows a warning on the rosters.
+            </span>
+          </label>
+        </div>
+
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md bg-red-500/15 px-3 py-2 text-sm font-medium text-red-200"
+          >
+            {error}
+          </p>
         )}
+      </DialogBody>
 
-        <label className="space-y-1.5 text-sm font-medium">
-          Section name
-          <input
-            className={fieldClass}
-            value={sectionName}
-            maxLength={100}
-            disabled={isPending}
-            onChange={(e) => setSectionName(e.target.value)}
-            placeholder="e.g. Mt. Arayat"
-          />
-        </label>
-
-        <label className="space-y-1.5 text-sm font-medium">
-          Adviser
-          <input
-            className={fieldClass}
-            value={teacherName}
-            maxLength={100}
-            disabled={isPending}
-            onChange={(e) => setTeacherName(e.target.value)}
-            placeholder="Adviser's full name"
-          />
-        </label>
-
-        <label className="space-y-1.5 text-sm font-medium">
-          Section order
-          <input
-            className={fieldClass}
-            type="number"
-            min={1}
-            step={1}
-            value={sectionOrder}
-            disabled={isPending}
-            onChange={(e) => setSectionOrder(e.target.value)}
-          />
-          <span className="block text-xs font-normal text-muted-foreground">
-            1 fills first. Learners go to the next order once a section is full.
-          </span>
-        </label>
-
-        <label className="space-y-1.5 text-sm font-medium">
-          Capacity
-          <input
-            className={fieldClass}
-            type="number"
-            min={1}
-            step={1}
-            value={capacity}
-            disabled={isPending}
-            onChange={(e) => setCapacity(e.target.value)}
-          />
-          <span className="block text-xs font-normal text-muted-foreground">
-            A soft limit. Going over it only shows a warning on the rosters.
-          </span>
-        </label>
-      </div>
-
-      {error && (
-        <p role="alert" className="text-sm font-medium text-destructive">
-          {error}
-        </p>
-      )}
-
-      <div className="flex justify-end gap-2">
+      <DialogFooter>
         <button
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="h-10 rounded-md border border-input bg-white px-4 text-sm font-medium hover:bg-muted disabled:opacity-60"
+          className="h-10 rounded-md border border-white/30 bg-transparent px-4 text-sm font-medium text-white hover:bg-white/10 disabled:opacity-60"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
         >
           {isPending && <Loader2 className="size-4 animate-spin" />}
           {isEdit ? "Save changes" : "Add section"}
         </button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }
