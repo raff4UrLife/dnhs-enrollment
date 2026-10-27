@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const developers = [
-  { name: "Grace Alibio", role: "QA Tester", image: "/assets/grace.png" },
+  { name: "Grace Alibio", role: "QA Tester", image: "/assets/grace.jpg" },
   {
     name: "Jashmine Marie Roa",
     role: "UI/UX Designer",
