@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { promoteLearners } from "@/lib/school-years/promote-learners";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -13,45 +14,108 @@ function refresh() {
   revalidatePath("/enrollment-form");
 }
 
-// Makes one school year the active one. Only one can be active at a time.
+// Makes one school year the active one. Only one can be active at a time:
+// the current active year is switched off automatically, and online
+// applications are closed for every year except the new active one.
 export async function setActiveSchoolYear(id: string): Promise<ActionResult> {
   await requireRole("admin");
   const supabase = createAdminClient();
 
-  // Turn the chosen year on first, then turn the others off, so a failure
-  // in between can never leave the system with no active year.
+  // Remember the current active year so we can put it back if anything fails
+  const { data: current, error: currentError } = await supabase
+    .from("school_years")
+    .select("id")
+    .eq("is_active", true)
+    .neq("id", id);
+
+  if (currentError) {
+    console.error("[school-years] read active failed:", currentError);
+    return { ok: false, error: "Could not read the current active year." };
+  }
+
+  const previousIds = (current ?? []).map((row) => row.id);
+
+  // 1. Switch the old active year off first
+  if (previousIds.length > 0) {
+    const { error: offError } = await supabase
+      .from("school_years")
+      .update({ is_active: false })
+      .in("id", previousIds);
+
+    if (offError) {
+      console.error("[school-years] switch off failed:", offError);
+      return {
+        ok: false,
+        error: "Could not switch off the previous school year.",
+      };
+    }
+  }
+
+  // 2. Then switch the chosen year on
   const { error: onError } = await supabase
     .from("school_years")
     .update({ is_active: true })
     .eq("id", id);
 
   if (onError) {
+    console.error("[school-years] set active failed:", onError);
+    // Put the old year back so the system is never left with no active year
+    if (previousIds.length > 0) {
+      await supabase
+        .from("school_years")
+        .update({ is_active: true })
+        .in("id", previousIds);
+    }
     return { ok: false, error: "Could not set the active school year." };
   }
 
-  const { error: offError } = await supabase
+  // 3. Only the active year may accept online applications, so close all
+  //    the others (this also cleans up any that were left open before)
+  const { error: closeError } = await supabase
     .from("school_years")
-    .update({ is_active: false })
+    .update({ application_enabled: false })
     .neq("id", id);
 
-  if (offError) {
+  refresh();
+
+  if (closeError) {
+    console.error("[school-years] close others failed:", closeError);
     return {
       ok: false,
-      error: "Could not switch off the previous school year.",
+      error:
+        "The active year was changed, but online applications of the other years could not be closed.",
     };
   }
 
-  refresh();
   return { ok: true };
 }
 
-// Opens or closes online pre-enrollment for one school year.
+// Opens or closes online pre-enrollment. Only the active school year can be
+// opened; closing is always allowed.
 export async function setApplicationEnabled(
   id: string,
   enabled: boolean,
 ): Promise<ActionResult> {
   await requireRole("admin");
   const supabase = createAdminClient();
+
+  if (enabled) {
+    const { data: year, error: yearError } = await supabase
+      .from("school_years")
+      .select("is_active")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (yearError || !year) {
+      return { ok: false, error: "Could not find that school year." };
+    }
+    if (!year.is_active) {
+      return {
+        ok: false,
+        error: "Only the active school year can accept online applications.",
+      };
+    }
+  }
 
   const { error } = await supabase
     .from("school_years")
@@ -65,13 +129,31 @@ export async function setApplicationEnabled(
   refresh();
   return { ok: true };
 }
-
 export type CreateSchoolYearResult =
-  | { ok: true; copiedSections: number }
+  | {
+      ok: true;
+      copiedSections: number;
+      promoted: number;
+      retained: number;
+      graduated: number;
+      needsStrand: number;
+    }
   | { ok: false; error: string };
 
-// Creates a new school year (inactive, applications closed) and copies the
-// sections of the latest earlier year into it. No learners are copied.
+// Removes a half-created year. Its enrollments are already cleaned up by
+// promoteLearners when it fails; sections are removed first in case the
+// foreign key does not cascade.
+async function undoNewYear(
+  supabase: ReturnType<typeof createAdminClient>,
+  schoolYearId: string,
+) {
+  await supabase.from("sections").delete().eq("school_year_id", schoolYearId);
+  await supabase.from("school_years").delete().eq("id", schoolYearId);
+}
+
+// Creates a new school year (inactive, applications closed), copies the
+// sections of the latest earlier year into it, then moves last year's
+// active learners into it (promoted, retained or graduated).
 export async function createSchoolYear(
   name: string,
 ): Promise<CreateSchoolYearResult> {
@@ -102,7 +184,7 @@ export async function createSchoolYear(
     return { ok: false, error: `School year ${trimmed} already exists.` };
   }
 
-  // Latest year before the new one is the source of the sections
+  // Latest year before the new one is the source of sections and learners
   const { data: previous, error: previousError } = await supabase
     .from("school_years")
     .select("id")
@@ -137,7 +219,7 @@ export async function createSchoolYear(
       .eq("school_year_id", previous.id);
 
     if (sectionsError) {
-      await supabase.from("school_years").delete().eq("id", created.id);
+      await undoNewYear(supabase, created.id);
       return { ok: false, error: "Could not read the previous sections." };
     }
 
@@ -148,14 +230,36 @@ export async function createSchoolYear(
         .insert(oldSections.map((s) => ({ ...s, school_year_id: created.id })));
 
       if (copyError) {
-        // Undo the new year so nothing is left half-created
-        await supabase.from("school_years").delete().eq("id", created.id);
+        await undoNewYear(supabase, created.id);
         return { ok: false, error: "Could not copy the sections." };
       }
       copiedSections = oldSections.length;
     }
   }
 
+  // Move last year's active learners into the new year. Needs the new
+  // sections to exist, so it runs after the copy above.
+  let promoted = 0;
+  let retained = 0;
+  let graduated = 0;
+  let needsStrand = 0;
+
+  if (previous) {
+    const result = await promoteLearners(previous.id, created.id);
+    if (!result.ok) {
+      await undoNewYear(supabase, created.id);
+      return { ok: false, error: result.error };
+    }
+    ({ promoted, retained, graduated, needsStrand } = result);
+  }
+
   refresh();
-  return { ok: true, copiedSections };
+  return {
+    ok: true,
+    copiedSections,
+    promoted,
+    retained,
+    graduated,
+    needsStrand,
+  };
 }

@@ -62,3 +62,45 @@ export async function writeAuditLog(input: AuditLogInput): Promise<boolean> {
     return false;
   }
 }
+// Saves many log rows in a few requests (500 per insert), for bulk jobs
+// like the yearly promotion. Never throws. Returns true only if every
+// chunk was saved; errors show in the terminal.
+export async function writeAuditLogs(
+  inputs: AuditLogInput[],
+): Promise<boolean> {
+  if (inputs.length === 0) return true;
+
+  try {
+    const admin = createAdminClient();
+    const CHUNK = 500;
+    let allSaved = true;
+
+    for (let i = 0; i < inputs.length; i += CHUNK) {
+      const rows = inputs.slice(i, i + CHUNK).map((input) => ({
+        entity_type: input.entityType,
+        entity_id: input.entityId,
+        action: input.action,
+        learner_id: input.learnerId ?? null,
+        school_year_id: input.schoolYearId ?? null,
+        changed_by: input.actor?.id ?? null,
+        changed_by_label: input.actor
+          ? `${input.actor.name ?? "Staff"} (${input.actor.role})`
+          : "System",
+        old_values: input.oldValues ?? null,
+        new_values: input.newValues ?? null,
+        note: input.note ?? null,
+      }));
+
+      const { error } = await admin.from("audit_logs").insert(rows);
+      if (error) {
+        console.error("[audit] bulk insert failed:", error.message);
+        allSaved = false;
+      }
+    }
+
+    return allSaved;
+  } catch (err) {
+    console.error("[audit] unexpected error:", err);
+    return false;
+  }
+}

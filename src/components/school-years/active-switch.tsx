@@ -33,12 +33,13 @@ export function ActiveSwitch({ schoolYearName, onConfirm }: Props) {
       <Button
         size="sm"
         variant="outline"
+        className="border-secondary bg-transparent font-semibold text-secondary transition-colors hover:bg-secondary hover:text-secondary-foreground"
         onClick={() => {
           setError(null);
           setConfirming(true);
         }}
       >
-        Set active
+        Set as active
       </Button>
     );
   }
@@ -47,7 +48,9 @@ export function ActiveSwitch({ schoolYearName, onConfirm }: Props) {
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground">
-          Make {schoolYearName} the active year?
+          Make{" "}
+          <span className="font-semibold text-secondary">{schoolYearName}</span>{" "}
+          the active year?
         </span>
         <Button
           size="sm"

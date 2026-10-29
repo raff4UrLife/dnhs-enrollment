@@ -10,6 +10,12 @@ type Props = {
   onChange?: (next: boolean) => Promise<RowActionResult>;
 };
 
+// Open = dark gold (readable on white), Closed = muted gray.
+const labelClass = (enabled: boolean) =>
+  enabled
+    ? "text-sm font-semibold text-amber-700"
+    : "text-sm font-medium text-muted-foreground";
+
 export function ApplicationsToggle({ enabled, onChange }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -17,9 +23,7 @@ export function ApplicationsToggle({ enabled, onChange }: Props) {
   // Read-only: just show the state.
   if (!onChange) {
     return (
-      <span className={enabled ? "text-foreground" : "text-muted-foreground"}>
-        {enabled ? "Open" : "Closed"}
-      </span>
+      <span className={labelClass(enabled)}>{enabled ? "Open" : "Closed"}</span>
     );
   }
 
@@ -33,7 +37,7 @@ export function ApplicationsToggle({ enabled, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <button
           type="button"
           role="switch"
@@ -51,7 +55,9 @@ export function ApplicationsToggle({ enabled, onChange }: Props) {
             }`}
           />
         </button>
-        <span className="text-sm">{enabled ? "Open" : "Closed"}</span>
+        <span className={labelClass(enabled)}>
+          {enabled ? "Open" : "Closed"}
+        </span>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
