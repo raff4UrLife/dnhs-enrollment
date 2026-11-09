@@ -154,10 +154,15 @@ async function undoNewYear(
 // Creates a new school year (inactive, applications closed), copies the
 // sections of the latest earlier year into it, then moves last year's
 // active learners into it (promoted, retained or graduated).
+// export async function createSchoolYear(
+//   name: string,
+// ): Promise<CreateSchoolYearResult> {
+//   await requireRole("admin");
+//   const supabase = createAdminClient();
 export async function createSchoolYear(
   name: string,
 ): Promise<CreateSchoolYearResult> {
-  await requireRole("admin");
+  const staff = await requireRole("admin");
   const supabase = createAdminClient();
 
   const trimmed = name.trim();
@@ -244,8 +249,16 @@ export async function createSchoolYear(
   let graduated = 0;
   let needsStrand = 0;
 
+  // if (previous) {
+  //   const result = await promoteLearners(previous.id, created.id);
+  //   if (!result.ok) {
+  //     await undoNewYear(supabase, created.id);
+  //     return { ok: false, error: result.error };
+  //   }
+  //   ({ promoted, retained, graduated, needsStrand } = result);
+  // }
   if (previous) {
-    const result = await promoteLearners(previous.id, created.id);
+    const result = await promoteLearners(previous.id, created.id, staff);
     if (!result.ok) {
       await undoNewYear(supabase, created.id);
       return { ok: false, error: result.error };
